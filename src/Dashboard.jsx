@@ -7,6 +7,7 @@ import {
   CLARITY_LIST, 
   SIEVE_RANGES, 
   PRICE_LISTS, 
+  PRICE_SIEVES,
   isHotSize,
   MASTER_SIZE_CHART
 } from './constants/diamondData';
@@ -318,35 +319,50 @@ export default function Dashboard() {
 // Component for IMAGE 3: Price Master (Benchmark Prices)
 const PriceMasterView = ({ prices, onUpdate }) => {
   const [activeShape, setActiveShape] = useState("Round");
-  const [activeSieve, setActiveSieve] = useState("s1");
+  const [activeSieve, setActiveSieve] = useState("r1");
   
-  const shapes = Object.keys(PRICE_LISTS);
-  const sieves = [
-    { id: "s1", label: "-0000/-00 (0.002-0.004)" },
-    { id: "s2", label: "+00/-2 (0.005-0.008)" },
-    { id: "s3", label: "+2/-6.5 (0.009-0.021)" },
-    { id: "s4", label: "+6.5/-9 (0.022-0.051)" },
-    { id: "s5", label: "+9/-11 (0.052-0.077)" },
-    { id: "s6", label: "+11/-13 (0.078-0.115)" },
-    { id: "s7", label: "+13/-15 (0.116-0.158)" },
-    { id: "s8", label: "+15/-16 (0.159-0.200)" }
-  ];
+  const uiShapes = ["Round", "Pear/Oval", "Baguette", "Triangles"];
+  const sieves = PRICE_SIEVES;
 
   const handlePriceChange = (col, clr, val) => {
     const next = { ...prices };
-    if (!next[activeShape]) next[activeShape] = {};
-    if (!next[activeShape][activeSieve]) next[activeShape][activeSieve] = {};
-    if (!next[activeShape][activeSieve][col]) next[activeShape][activeSieve][col] = {};
-    next[activeShape][activeSieve][col][clr] = parseFloat(val) || 0;
+    // Map non-round shapes to 'Fancy' in the backend
+    const priceShape = activeShape === "Round" ? "Round" : "Fancy";
+    const shapeKey = Object.keys(next).find(k => k.toLowerCase() === priceShape.toLowerCase()) || priceShape;
+    
+    if (!next[shapeKey]) next[shapeKey] = {};
+    if (!next[shapeKey][activeSieve]) next[shapeKey][activeSieve] = {};
+    if (!next[shapeKey][activeSieve][col]) next[shapeKey][activeSieve][col] = {};
+    next[shapeKey][activeSieve][col][clr] = parseFloat(val) || 0;
     onUpdate(next);
   };
 
-  const currentGrid = prices[activeShape]?.[activeSieve] || {};
+  const handleExcelSync = async () => {
+    if (!confirm("Are you sure you want to overwrite all prices with the data from 'PRICE LIST_27_4_2026.xlsx'?")) return;
+    try {
+       const res = await api.syncPricesFromExcel();
+       if (res.status === 'success') {
+          const newConfig = await api.getMyConfig();
+          onUpdate(newConfig?.price_overrides || res.data);
+          alert("Prices synchronized successfully!");
+       } else {
+          alert("Error: " + (res.detail || "Unknown error"));
+       }
+    } catch (err) {
+       console.error("Sync failed", err);
+       alert("Failed to sync from Excel.");
+    }
+  };
+
+  // Map non-round to 'Fancy' for data lookup
+  const lookupShape = activeShape === "Round" ? "Round" : "Fancy";
+  const shapeKey = Object.keys(prices).find(k => k.toLowerCase() === lookupShape.toLowerCase());
+  const currentGrid = shapeKey ? (prices[shapeKey]?.[activeSieve] || {}) : {};
 
   return (
     <div className="price-master-inner">
        <div className="shape-tabs" style={{display:'flex', gap:10, marginBottom:15}}>
-          {shapes.map(s => (
+          {uiShapes.map(s => (
              <button 
                 key={s} 
                 className={`btn-sm ${activeShape === s ? 'btn-primary' : 'btn-outline'}`}
@@ -372,6 +388,13 @@ const PriceMasterView = ({ prices, onUpdate }) => {
        <div className="card glass">
           <div className="card-hdr" style={{display:'flex', justifyContent:'space-between'}}>
              <span>{activeShape.toUpperCase()} — {activeSieve.toUpperCase()} Price Grid</span>
+             <button 
+                className="btn-mini btn-outline" 
+                onClick={handleExcelSync}
+                style={{borderColor:'#fbbf24', color:'#fbbf24'}}
+             >
+                🔄 Sync from Excel
+             </button>
           </div>
           <table className="ef-table-excel">
              <thead>
@@ -389,7 +412,7 @@ const PriceMasterView = ({ prices, onUpdate }) => {
                             <input 
                               className="cell-input" 
                               style={{textAlign:'center', background:'transparent', border:'none', color:'#fff', width:'100%'}}
-                              value={currentGrid[col]?.[clr] || ""}
+                              value={currentGrid[col]?.[clr] !== undefined ? Number(currentGrid[col][clr]).toFixed(2) : ""}
                               onChange={e => handlePriceChange(col, clr, e.target.value)}
                             />
                          </td>
@@ -907,7 +930,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, tot
 
 // NEW COMPONENT: Fluorescence (Fluo) Profile
 const FluoProfileTable = ({ totalWeight, totalPcs, fluoState, onUpdate }) => {
-  const categories = ["None-FNT", "Fnt", "Med/Stg"];
+  const categories = ["None", "Fnt", "Med/Stg"];
   const totalPct = categories.reduce((s, cat) => s + (parseFloat(fluoState[cat]) || 0), 0);
   
   return (
@@ -964,7 +987,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
     activeShape: 'Round', // New
     sizeProfile: {}, 
     sampleConfig: {}, 
-    fluo: { "None-FNT": 95, "Fnt": 0, "Med/Stg": 5 },
+    fluo: { "None": 95, "Fnt": 0, "Med/Stg": 5 },
     prices: globalPrices,
     extrapolate: true, 
     totalRoughWeight: 100, 
@@ -1037,7 +1060,8 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
               const roughC = sCts * rangeScaleFactor; 
               const polC = parseFloat((roughC * (rYield / 100)).toFixed(2));
               
-              const price = globalPrices?.[shape]?.[pIdx]?.[col]?.[clr] || 0;
+               const priceShape = shape === "Round" ? "Round" : "Fancy";
+              const price = globalPrices?.[priceShape]?.[pIdx]?.[col]?.[clr] || 0;
               
               totalCts += polC;
               totalValue += polC * price;

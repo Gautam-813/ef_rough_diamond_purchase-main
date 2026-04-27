@@ -9,6 +9,7 @@ import models, schemas, auth_utils
 from database import engine, get_db
 from datetime import timedelta
 import datetime
+import pandas as pd
 from typing import List, Dict, Any
 import os
 import shutil
@@ -201,6 +202,90 @@ def update_my_config(data: Dict[str, Any], current_user: models.User = Depends(g
     
     db.commit()
     return {"status": "success", "message": "Master preferences updated"}
+
+@app.post("/config/sync-excel")
+async def sync_prices_from_excel(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    excel_path = "PRICE LIST_27_4_2026.xlsx"
+    if not os.path.exists(excel_path):
+        raise HTTPException(status_code=404, detail="Excel price list file not found in root directory.")
+
+    try:
+        df = pd.read_excel(excel_path, sheet_name="PRICE LIST")
+        
+        # Define our targets
+        price_lists = {"Round": {}, "Fancy": {}}
+        
+        # These match our constants in diamondData.js
+        colors = ["DEF", "G", "H", "I", "J", "K", "L", "M", "CAPE"]
+        clarities = ["VVS", "VS1", "VS2", "SI1", "SI2", "I1", "I2"]
+        
+        # Exact column offsets in Excel after the "Row Labels" column (which is +0)
+        # VVS1 is +1, VVS2 is +2, VS1 is +3, VS2 is +4, SI1 is +5, SI2 is +6, I1 is +7, I2 is +8
+        clarity_col_mapping = {
+            "VVS": 1,
+            "VS1": 3,
+            "VS2": 4,
+            "SI1": 5,
+            "SI2": 6,
+            "I1": 7,
+            "I2": 8
+        }
+        
+        # Mapping of Excel range labels to our r1-r8 IDs
+        range_mapping = {
+            "0.002-0.004": "r1",
+            "0.005-0.008": "r2",
+            "0.009-0.021": "r3",
+            "0.022-0.051": "r4",
+            "0.052-0.077": "r5",
+            "0.078-0.115": "r6",
+            "0.116-0.158": "r7",
+            "0.159-0.200": "r8"
+        }
+
+        # ROUND is columns 1-9 (approx), FANCY is columns 12-20 (approx)
+        
+        # Helper to extract a block
+        def extract_block(start_row, shape_col_offset):
+            block = {}
+            for i, color in enumerate(colors):
+                row_idx = start_row + i + 1
+                if row_idx >= len(df): break
+                block[color] = {}
+                for clarity in clarities:
+                    col_offset = clarity_col_mapping.get(clarity)
+                    col_idx = shape_col_offset + col_offset
+                    try:
+                        val = df.iloc[row_idx, col_idx]
+                        block[color][clarity] = round(float(val), 2) if pd.notnull(val) else 0
+                    except:
+                        block[color][clarity] = 0
+            return block
+
+        # Find where ranges start
+        for row_idx in range(len(df)):
+            cell_val = str(df.iloc[row_idx, 1]) # Column B usually has the range label for Round
+            for label, r_id in range_mapping.items():
+                if label in cell_val:
+                    # Round block starts here
+                    price_lists["Round"][r_id] = extract_block(row_idx + 1, 0)
+                    
+                    # Fancy block is to the right (offset ~11 columns)
+                    price_lists["Fancy"][r_id] = extract_block(row_idx + 1, 11)
+
+        # Save to DB
+        config = db.query(models.MasterConfig).filter(models.MasterConfig.user_id == current_user.id).first()
+        if not config:
+            config = models.MasterConfig(user_id=current_user.id)
+            db.add(config)
+        
+        config.price_overrides = price_lists
+        db.commit()
+        
+        return {"status": "success", "message": "Prices synchronized from Excel", "data": price_lists}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error parsing Excel: {str(e)}")
 
 # --- TENDER / NOTEBOOK ROUTES ---
 

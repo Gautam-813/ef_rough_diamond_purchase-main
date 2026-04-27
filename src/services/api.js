@@ -170,5 +170,13 @@ export const api = {
       body: JSON.stringify(data),
     });
     return res.json();
+  },
+  
+  syncPricesFromExcel: async () => {
+    const res = await fetch(`${API_URL}/config/sync-excel`, {
+      method: "POST",
+      headers: getHeaders(),
+    });
+    return res.json();
   }
 };

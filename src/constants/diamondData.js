@@ -1,35 +1,49 @@
 
-export const COLOUR_LIST = ["DEF", "G", "H", "I", "JK"];
-export const CLARITY_LIST = ["VVS", "VS1", "VS2", "SI1", "SI2"];
+export const COLOUR_LIST = ["DEF", "G", "H", "I", "J", "K", "L", "M", "CAPE"];
+export const CLARITY_LIST = ["VVS", "VS1", "VS2", "SI1", "SI2", "I1", "I2"];
 
 export const SIEVE_RANGES = {
-  // --- Small Ratios (s1) ---
-  "+000 / -0": { priceIdx: "s1" }, "+0 / -1": { priceIdx: "s1" }, "+1 / -1.5": { priceIdx: "s1" }, "+1.5 / -2": { priceIdx: "s1" },
-  "+2": { priceIdx: "s1" }, "+2.5": { priceIdx: "s1" }, "+3": { priceIdx: "s1" }, "+3.5": { priceIdx: "s1" }, "+4": { priceIdx: "s1" },
-  "+4.5 / -5": { priceIdx: "s1" }, "+5 / -5.5": { priceIdx: "s1" }, "+5.5 / -6": { priceIdx: "s1" }, "+6 / -6.5": { priceIdx: "s1" },
-  "+6.5 / -7": { priceIdx: "s1" }, "+7": { priceIdx: "s1" }, "+7.5 / -8": { priceIdx: "s1" }, "+8": { priceIdx: "s1" },
-  "+8.5 / -9": { priceIdx: "s1" },
-  // Grouped Keys (For direct category matching)
-  "+3.5 / -4": { priceIdx: "s1" }, "+4 / -4.5": { priceIdx: "s1" }, "+5.5 / -6": { priceIdx: "s1" }, "+6 / -6.5": { priceIdx: "s1" },
-  "+7 / -7.5": { priceIdx: "s1" }, "+7.5 / -8": { priceIdx: "s1" }, "+8 / -8.5": { priceIdx: "s1" }, "+8.5 / -9": { priceIdx: "s1" },
+  // Mapping of physical sieves to Excel Price Ranges
+  // Range 1: 0.002-0.004
+  "+000 / -0": { priceIdx: "r1" }, "+0 / -1": { priceIdx: "r1" }, 
+  
+  // Range 2: 0.005-0.008
+  "+1 / -1.5": { priceIdx: "r2" }, "+1.5 / -2": { priceIdx: "r2" },
+  
+  // Range 3: 0.009-0.021
+  "+2": { priceIdx: "r3" }, "+2.5": { priceIdx: "r3" }, "+3": { priceIdx: "r3" }, "+3.5": { priceIdx: "r3" }, "+4": { priceIdx: "r3" },
+  "+4.5 / -5": { priceIdx: "r3" }, "+5 / -5.5": { priceIdx: "r3" }, "+5.5 / -6": { priceIdx: "r3" }, "+6 / -6.5": { priceIdx: "r3" },
+  
+  // Range 4: 0.022-0.051
+  "+6.5 / -7": { priceIdx: "r4" }, "+7": { priceIdx: "r4" }, "+7.5 / -8": { priceIdx: "r4" }, "+8": { priceIdx: "r4" },
+  "+8.5 / -9": { priceIdx: "r4" },
 
-  // --- Medium Ratios (s2) ---
-  "+9": { priceIdx: "s2" }, "+9.5 / -10": { priceIdx: "s2" }, "+10 / -10.5": { priceIdx: "s2" },
-  "+10.5 / -11": { priceIdx: "s2" }, "+11": { priceIdx: "s2" }, "+11.5 / -12": { priceIdx: "s2" }, "+12": { priceIdx: "s2" },
-  "+12.5 / -13": { priceIdx: "s2" },
-  // Grouped Keys
-  "+9 / -9.5": { priceIdx: "s2" }, "+10 / -10.5": { priceIdx: "s2" }, "+10.5 / -11": { priceIdx: "s2" }, 
-  "+11 / -11.5": { priceIdx: "s2" }, "+11.5 / -12": { priceIdx: "s2" }, "+12 / -12.5": { priceIdx: "s2" }, "+12.5 / -13": { priceIdx: "s2" },
+  // Range 5: 0.052-0.077
+  "+9": { priceIdx: "r5" }, "+9.5 / -10": { priceIdx: "r5" }, "+10 / -10.5": { priceIdx: "r5" },
 
-  // --- Large Ratios (s3) ---
-  "+13": { priceIdx: "s3" }, "+13.5": { priceIdx: "s3" }, "+14": { priceIdx: "s3" },
-  "+14.5": { priceIdx: "s3" }, "+15": { priceIdx: "s3" }, "+15.5": { priceIdx: "s3" }, "+16": { priceIdx: "s3" },
-  "-17": { priceIdx: "s3" }, "-18": { priceIdx: "s3" }, "-19": { priceIdx: "s3" }, "-20": { priceIdx: "s3" }, "3Gr": { priceIdx: "s3" },
-  // Grouped Keys
-  "+13 / -13.5": { priceIdx: "s3" }, "+13.5 / -14": { priceIdx: "s3" }, "+14 / -14.5": { priceIdx: "s3" }, 
-  "+14.5 / -15": { priceIdx: "s3" }, "+15 / +15.5": { priceIdx: "s3" }, "+15.5 / -16": { priceIdx: "s3" },
-  "+16 / +17": { priceIdx: "s3" }, "-17 / +18": { priceIdx: "s3" }, "-18 / +19": { priceIdx: "s3" }, "-19 / +20": { priceIdx: "s3" }
+  // Range 6: 0.078-0.115
+  "+10.5 / -11": { priceIdx: "r6" }, "+11": { priceIdx: "r6" }, "+11.5 / -12": { priceIdx: "r6" },
+
+  // Range 7: 0.116-0.158
+  "+12": { priceIdx: "r7" }, "+12.5 / -13": { priceIdx: "r7" }, "+13": { priceIdx: "r7" }, 
+  "+13.5": { priceIdx: "r7" }, "+14": { priceIdx: "r7" }, "+14.5": { priceIdx: "r7" },
+
+  // Range 8: 0.159-0.200
+  "+15": { priceIdx: "r8" }, "+15.5": { priceIdx: "r8" }, "+16": { priceIdx: "r8" },
+  "-17": { priceIdx: "r8" }, "-18": { priceIdx: "r8" }, "-19": { priceIdx: "r8" }, "-20": { priceIdx: "r8" }, 
+  "3Gr": { priceIdx: "r8" }
 };
+
+export const PRICE_SIEVES = [
+  { id: "r1", label: "0.002-0.004" },
+  { id: "r2", label: "0.005-0.008" },
+  { id: "r3", label: "0.009-0.021" },
+  { id: "r4", label: "0.022-0.051" },
+  { id: "r5", label: "0.052-0.077" },
+  { id: "r6", label: "0.078-0.115" },
+  { id: "r7", label: "0.116-0.158" },
+  { id: "r8", label: "0.159-0.200" }
+];
 
 export const MASTER_SIZE_CHART = [
   { id: 1, ratio: "1/200", sieve: "+000 / -0", weight: "0.005", mm: "0.90-1.10" },
@@ -58,14 +72,14 @@ export const MASTER_SIZE_CHART = [
 
 export const PRICE_LISTS = (() => {
   const full = {};
-  ["Round", "Pear/Oval", "Baguette", "Triangles"].forEach(shape => {
+  ["Round", "Fancy"].forEach(shape => {
     full[shape] = {};
-    ["s1", "s2", "s3"].forEach(sieve => {
-      full[shape][sieve] = {};
+    PRICE_SIEVES.forEach(sv => {
+      full[shape][sv.id] = {};
       COLOUR_LIST.forEach(colour => {
-        full[shape][sieve][colour] = {};
+        full[shape][sv.id][colour] = {};
         CLARITY_LIST.forEach(clarity => {
-          full[shape][sieve][colour][clarity] = 5000;
+          full[shape][sv.id][colour][clarity] = 0;
         });
       });
     });
