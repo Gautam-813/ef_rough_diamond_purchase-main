@@ -1,0 +1,30 @@
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.eslintcache
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.local
+
+# Databases
+*.sqlite3
+*.db
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# App Specific
+backend/uploads/
+uploads/
