@@ -13,21 +13,6 @@ from typing import List, Dict, Any
 import os
 import shutil
 
-# --- STARTUP EVENT ---
-@app.on_event("startup")
-async def startup_event():
-    print("Starting up EF Diamond ERP...")
-    try:
-        # Create the database tables on startup
-        models.Base.metadata.create_all(bind=engine)
-        print("Database tables verified.")
-        
-        # Create initial admin
-        create_initial_admin()
-        print("Initial admin check complete.")
-    except Exception as e:
-        print(f"CRITICAL ERROR DURING STARTUP: {e}")
-        # In production, we might want to log this to an external service
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
@@ -64,6 +49,22 @@ def create_initial_admin():
         db.add(new_admin)
         db.commit()
         print("Default Admin Created: admin@efdiamond.com / admin123")
+
+# --- STARTUP EVENT ---
+@app.on_event("startup")
+async def startup_event():
+    print("Starting up EF Diamond ERP...")
+    try:
+        # Create the database tables on startup
+        models.Base.metadata.create_all(bind=engine)
+        print("Database tables verified.")
+        
+        # Create initial admin
+        create_initial_admin()
+        print("Initial admin check complete.")
+    except Exception as e:
+        print(f"CRITICAL ERROR DURING STARTUP: {e}")
+        # In production, we might want to log this to an external service
 
 # create_initial_admin() - Called by startup_event
 
