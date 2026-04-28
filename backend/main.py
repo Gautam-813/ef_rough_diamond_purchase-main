@@ -204,34 +204,29 @@ def update_my_config(data: Dict[str, Any], current_user: models.User = Depends(g
     return {"status": "success", "message": "Master preferences updated"}
 
 @app.post("/config/sync-excel")
-async def sync_prices_from_excel(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    excel_path = "PRICE LIST_27_4_2026.xlsx"
-    if not os.path.exists(excel_path):
-        raise HTTPException(status_code=404, detail="Excel price list file not found in root directory.")
-
+async def sync_prices_from_excel(
+    file: UploadFile = File(...), 
+    current_user: models.User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
     try:
-        df = pd.read_excel(excel_path, sheet_name="PRICE LIST")
+        # Load the uploaded Excel file
+        df = pd.read_excel(file.file, sheet_name=0, header=None)
         
         # Define our targets
         price_lists = {"Round": {}, "Fancy": {}}
         
-        # These match our constants in diamondData.js
+        # Consistent data keys
         colors = ["DEF", "G", "H", "I", "J", "K", "L", "M", "CAPE"]
         clarities = ["VVS", "VS1", "VS2", "SI1", "SI2", "I1", "I2"]
         
-        # Exact column offsets in Excel after the "Row Labels" column (which is +0)
-        # VVS1 is +1, VVS2 is +2, VS1 is +3, VS2 is +4, SI1 is +5, SI2 is +6, I1 is +7, I2 is +8
+        # Column offsets from the start of each block (Color col is +0)
+        # Based on Final-Price-Template.xlsx: VVS is +1, VS1 is +2, VS2 is +3, SI1 is +4, SI2 is +5, I1 is +6, I2 is +7
         clarity_col_mapping = {
-            "VVS": 1,
-            "VS1": 3,
-            "VS2": 4,
-            "SI1": 5,
-            "SI2": 6,
-            "I1": 7,
-            "I2": 8
+            "VVS": 1, "VS1": 2, "VS2": 3, "SI1": 4, "SI2": 5, "I1": 6, "I2": 7
         }
         
-        # Mapping of Excel range labels to our r1-r8 IDs
+        # Mapping of weight labels to our r1-r8 IDs
         range_mapping = {
             "0.002-0.004": "r1",
             "0.005-0.008": "r2",
@@ -240,38 +235,44 @@ async def sync_prices_from_excel(current_user: models.User = Depends(get_current
             "0.052-0.077": "r5",
             "0.078-0.115": "r6",
             "0.116-0.158": "r7",
-            "0.159-0.200": "r8"
+            "0.159": "r8" # Handle 0.159+ or just 0.159
         }
 
-        # ROUND is columns 1-9 (approx), FANCY is columns 12-20 (approx)
-        
-        # Helper to extract a block
         def extract_block(start_row, shape_col_offset):
             block = {}
             for i, color in enumerate(colors):
                 row_idx = start_row + i + 1
                 if row_idx >= len(df): break
+                
+                # Check if this row actually has the color label
+                row_label = str(df.iloc[row_idx, shape_col_offset]).strip()
+                if not any(c in row_label for c in [color, "CAPE"]): 
+                    # If the label doesn't match, we might have hit the end of a block
+                    continue
+
                 block[color] = {}
                 for clarity in clarities:
                     col_offset = clarity_col_mapping.get(clarity)
                     col_idx = shape_col_offset + col_offset
                     try:
                         val = df.iloc[row_idx, col_idx]
+                        # Handle values like "1079.2" safely
                         block[color][clarity] = round(float(val), 2) if pd.notnull(val) else 0
                     except:
                         block[color][clarity] = 0
             return block
 
-        # Find where ranges start
+        # Find where ranges start by scanning the description column
+        # In the template, ranges are in Column B (idx 1) for Round and Column L (idx 11) for Fancy
+        # But they are usually aligned on the same rows.
         for row_idx in range(len(df)):
-            cell_val = str(df.iloc[row_idx, 1]) # Column B usually has the range label for Round
+            cell_val = str(df.iloc[row_idx, 1]).strip()
             for label, r_id in range_mapping.items():
                 if label in cell_val:
-                    # Round block starts here
+                    # Round block (Starts at Col A/0)
                     price_lists["Round"][r_id] = extract_block(row_idx + 1, 0)
-                    
-                    # Fancy block is to the right (offset ~11 columns)
-                    price_lists["Fancy"][r_id] = extract_block(row_idx + 1, 11)
+                    # Fancy block (Starts at Col K/10)
+                    price_lists["Fancy"][r_id] = extract_block(row_idx + 1, 10)
 
         # Save to DB
         config = db.query(models.MasterConfig).filter(models.MasterConfig.user_id == current_user.id).first()
@@ -282,7 +283,12 @@ async def sync_prices_from_excel(current_user: models.User = Depends(get_current
         config.price_overrides = price_lists
         db.commit()
         
-        return {"status": "success", "message": "Prices synchronized from Excel", "data": price_lists}
+        return {"status": "success", "message": "Prices uploaded and synchronized successfully", "data": price_lists}
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error parsing Excel: {str(e)}")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error parsing Excel: {str(e)}")

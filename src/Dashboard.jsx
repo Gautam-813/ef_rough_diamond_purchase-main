@@ -403,6 +403,7 @@ export default function Dashboard() {
 const PriceMasterView = ({ prices, onUpdate }) => {
   const [activeShape, setActiveShape] = useState("Round");
   const [activeSieve, setActiveSieve] = useState("r1");
+  const fileInputRef = React.useRef(null);
   
   const uiShapes = ["Round", "Pear/Oval", "Baguette", "Triangles"];
   const sieves = PRICE_SIEVES;
@@ -420,20 +421,32 @@ const PriceMasterView = ({ prices, onUpdate }) => {
     onUpdate(next);
   };
 
-  const handleExcelSync = async () => {
-    if (!confirm("Are you sure you want to overwrite all prices with the data from 'PRICE LIST_27_4_2026.xlsx'?")) return;
+  const handleExcelSync = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!confirm(`Are you sure you want to upload and sync prices from '${file.name}'?`)) {
+       e.target.value = '';
+       return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
     try {
-       const res = await api.syncPricesFromExcel();
+       const res = await api.syncPricesFromExcel(formData);
        if (res.status === 'success') {
           const newConfig = await api.getMyConfig();
           onUpdate(newConfig?.price_overrides || res.data);
-          alert("Prices synchronized successfully!");
+          alert("✅ Prices uploaded and synchronized successfully!");
        } else {
-          alert("Error: " + (res.detail || "Unknown error"));
+          alert("❌ Error: " + (res.detail || "Unknown error"));
        }
     } catch (err) {
        console.error("Sync failed", err);
-       alert("Failed to sync from Excel.");
+       alert("❌ Failed to upload Excel file. Make sure it matches the template.");
+    } finally {
+       e.target.value = ''; // Reset input
     }
   };
 
@@ -470,13 +483,20 @@ const PriceMasterView = ({ prices, onUpdate }) => {
 
        <div className="card glass">
           <div className="card-hdr" style={{display:'flex', justifyContent:'space-between'}}>
-             <span>{activeShape.toUpperCase()} — {activeSieve.toUpperCase()} Price Grid</span>
+              <span>{activeShape.toUpperCase()} — {activeSieve.toUpperCase()} Price Grid</span>
+              <input 
+                 type="file" 
+                 ref={fileInputRef} 
+                 style={{display:'none'}} 
+                 accept=".xlsx, .xls"
+                 onChange={handleExcelSync}
+              />
              <button 
                 className="btn-mini btn-outline" 
-                onClick={handleExcelSync}
+                 onClick={() => fileInputRef.current?.click()}
                 style={{borderColor:'#fbbf24', color:'#fbbf24'}}
              >
-                🔄 Sync from Excel
+                                 🔄 Upload Price Excel
              </button>
           </div>
           <table className="ef-table-excel">
