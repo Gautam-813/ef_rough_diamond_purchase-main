@@ -608,7 +608,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                                 <span style={{fontSize:8, opacity:0.6}}>x</span>
                                 <input 
                                    className="cell-input" 
-                                   style={{width:30, fontSize:10, color:'var(--gold)', textAlign:'center'}} 
+                                   style={{width:45, fontSize:10, color:'var(--gold)', textAlign:'center'}} 
                                    value={clarityMultipliers[c] || ""} 
                                    onChange={e => onClarityMultiplierChange(range, c, e.target.value)}
                                    placeholder="1.0"
@@ -617,8 +617,8 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                           </div>
                        </th>
                     ))}
-                    <th colSpan="2" style={{background:'#1e3a8a', color:'#fff'}}>Sample Total</th>
-                    <th colSpan="2" style={{background:'var(--card2)', color:'var(--gold)'}}>Whole Total</th>
+                    <th colSpan="2" style={{background:'#1e3a8a', color:'#fff', minWidth:100}}>Sample Total</th>
+                    <th colSpan="2" style={{background:'var(--card2)', color:'var(--gold)', minWidth:100}}>Whole Total</th>
                  </tr>
                  <tr>
                     {CLARITY_LIST.map(c => <React.Fragment key={c}>
@@ -640,7 +640,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                           return (
                              <tr key={`${colour}-${shape}`}>
                                 {sIdx === 0 && <td rowSpan={selectedShapes.length} className="rng-cell" style={{verticalAlign:'middle', background:'rgba(255,255,255,0.02)'}}>{colour}</td>}
-                                <td style={{fontSize:11, fontWeight:600, opacity:0.8}}>{shape}</td>
+                                <td style={{fontSize:11, fontWeight:600, opacity:0.8, minWidth:80}}>{shape}</td>
                                 {CLARITY_LIST.map(clarity => {
                                    const p = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                                    const c = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
@@ -651,10 +651,10 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                                    wholeRowP += wP; wholeRowC += wC;
                                    return (
                                       <React.Fragment key={clarity}>
-                                         <td><input className="cell-input" value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs || ""} onChange={e => onValueChange(range, colour, clarity, 'pcs', e.target.value, shape)} /></td>
-                                         <td><input className="cell-input" value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts || ""} onChange={e => onValueChange(range, colour, clarity, 'cts', e.target.value, shape)} /></td>
-                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700}}>{wP || ""}</td>
-                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700}}>{wC.toFixed(2) || ""}</td>
+                                         <td><input className="cell-input" style={{width:45}} value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs || ""} onChange={e => onValueChange(range, colour, clarity, 'pcs', e.target.value, shape)} /></td>
+                                         <td><input className="cell-input" style={{width:45}} value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts || ""} onChange={e => onValueChange(range, colour, clarity, 'cts', e.target.value, shape)} /></td>
+                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700, minWidth:45}}>{wP || ""}</td>
+                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700, minWidth:50}}>{wC.toFixed(2) || ""}</td>
                                       </React.Fragment>
                                    );
                                 })}
@@ -728,18 +728,8 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
   const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
   const targetCts = parseFloat(target.cts) || 0;
 
-  let sampleTotalCts = 0;
-  let sampleTotalPcs = 0;
-  COLOUR_LIST.forEach(col => {
-    selectedShapes.forEach(shape => {
-      CLARITY_LIST.forEach(clr => {
-        sampleTotalCts += parseFloat(state.table?.[range]?.[col]?.[shape]?.[clr]?.cts) || 0;
-        sampleTotalPcs += parseFloat(state.table?.[range]?.[col]?.[shape]?.[clr]?.pcs) || 0;
-      });
-    });
-  });
-  
-  const rangeScaleFactor = (targetCts > 0 && sampleTotalCts > 0) ? (targetCts / sampleTotalCts) : 1;
+  const sample = state.sampleConfig?.[range] || { pcs: 0, cts: 0 };
+  const rangeScaleFactor = (targetCts > 0 && sample.cts > 0) ? (targetCts / sample.cts) : 1;
 
   // AUTOMATED SIZE LOOKUP
   let totalP = 0; let totalC = 0;
@@ -1176,7 +1166,8 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
         });
       });
 
-      const rangeScaleFactor = (targetCts > 0 && rSampleCts > 0) ? (targetCts / rSampleCts) : 1;
+      const rSampleRaw = state.sampleConfig?.[r] || { cts: 0, pcs: 0 };
+      const rangeScaleFactor = (targetCts > 0 && rSampleRaw.cts > 0) ? (targetCts / rSampleRaw.cts) : 1;
       
       // Calculate dynamic category-wide avg pol size to find the price index
       const multiplier = parseFloat(rCfg.multiplier) || (state.strategy === 'Whole' ? 1 : 2);
