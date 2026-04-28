@@ -31,8 +31,8 @@ def force_sync():
 
     def extract_block(start_row, shape_col_offset):
         block = {}
-        # Scan the next 20 rows to find all matching colors
-        for offset in range(1, 20):
+        # Scan the next 12 rows to find all matching colors (each range block is about 10-12 rows)
+        for offset in range(1, 13):
             row_idx = start_row + offset
             if row_idx >= len(df): break
 
@@ -49,6 +49,9 @@ def force_sync():
                     break
 
             if matched_color:
+                # Check if we already found this color (avoid duplicates from adjacent ranges)
+                if matched_color in block:
+                    continue
                 block[matched_color] = {}
                 for clarity in clarities:
                     c_offset = clarity_col_mapping.get(clarity)
@@ -71,18 +74,38 @@ def force_sync():
                 price_lists["Round"][r_id] = extract_block(row_idx + 1, 0)
                 price_lists["Fancy"][r_id] = extract_block(row_idx + 1, 11)
 
+    print(f"Extracted price_lists keys: Round={list(price_lists['Round'].keys())}, Fancy={list(price_lists['Fancy'].keys())}")
+    print(f"Sample Round r4 DEF: {price_lists.get('Round', {}).get('r4', {}).get('DEF', {})}")
+
     # Save to all users (just to be safe)
     users = db.query(models.User).all()
+    print(f"Found {len(users)} users")
     for user in users:
+        print(f"Processing user {user.id}: {user.email}")
         config = db.query(models.MasterConfig).filter(models.MasterConfig.user_id == user.id).first()
         if not config:
+            print(f"Creating new config for user {user.id}")
             config = models.MasterConfig(user_id=user.id)
             db.add(config)
+        else:
+            print(f"Found existing config for user {user.id}")
         config.price_overrides = price_lists
-        print(f"Updated config for user {user.email}")
-    
-    db.commit()
-    print("SUCCESS: Prices Forced into DB for all users")
+        print(f"Set price_overrides for user {user.email}")
+
+    try:
+        db.commit()
+        print("SUCCESS: Prices Forced into DB for all users")
+
+        # Verify the data was saved
+        configs = db.query(models.MasterConfig).all()
+        for config in configs:
+            print(f"User {config.user_id} price_overrides: {bool(config.price_overrides)} {type(config.price_overrides)}")
+            if config.price_overrides:
+                print(f"Keys: {list(config.price_overrides.keys()) if isinstance(config.price_overrides, dict) else 'not dict'}")
+
+    except Exception as e:
+        print(f"ERROR during commit: {e}")
+        db.rollback()
 
 if __name__ == "__main__":
     force_sync()
