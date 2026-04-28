@@ -240,39 +240,47 @@ async def sync_prices_from_excel(
 
         def extract_block(start_row, shape_col_offset):
             block = {}
-            for i, color in enumerate(colors):
-                row_idx = start_row + i + 1
+            # Scan the next 20 rows to find all matching colors
+            for offset in range(1, 20):
+                row_idx = start_row + offset
                 if row_idx >= len(df): break
                 
-                # Check if this row actually has the color label
-                row_label = str(df.iloc[row_idx, shape_col_offset]).strip()
-                if not any(c in row_label for c in [color, "CAPE"]): 
-                    # If the label doesn't match, we might have hit the end of a block
-                    continue
+                # Get the row label (Color) from the first column of the block
+                row_label = str(df.iloc[row_idx, shape_col_offset]).strip().upper()
+                if not row_label or row_label == 'NAN': continue
 
-                block[color] = {}
-                for clarity in clarities:
-                    col_offset = clarity_col_mapping.get(clarity)
-                    col_idx = shape_col_offset + col_offset
-                    try:
-                        val = df.iloc[row_idx, col_idx]
-                        # Handle values like "1079.2" safely
-                        block[color][clarity] = round(float(val), 2) if pd.notnull(val) else 0
-                    except:
-                        block[color][clarity] = 0
+                # Match against our standard color list
+                matched_color = None
+                for color in colors:
+                    # Match exact or handle CAPE / DEF labels
+                    if color == row_label or (color == "CAPE" and "CAPE" in row_label) or (color == "DEF" and "DEF" in row_label):
+                        matched_color = color
+                        break
+                
+                if matched_color:
+                    block[matched_color] = {}
+                    for clarity in clarities:
+                        c_offset = clarity_col_mapping.get(clarity)
+                        col_idx = shape_col_offset + c_offset
+                        try:
+                            val = df.iloc[row_idx, col_idx]
+                            # Clean the value (handle strings with commas or symbols)
+                            if isinstance(val, str):
+                                val = val.replace(',', '').replace('$', '').strip()
+                            block[matched_color][clarity] = round(float(val), 2) if pd.notnull(val) else 0
+                        except:
+                            block[matched_color][clarity] = 0
             return block
 
-        # Find where ranges start by scanning the description column
-        # In the template, ranges are in Column B (idx 1) for Round and Column L (idx 11) for Fancy
-        # But they are usually aligned on the same rows.
+        # Find where ranges start by scanning the description column (usually Column B/Index 1)
         for row_idx in range(len(df)):
             cell_val = str(df.iloc[row_idx, 1]).strip()
             for label, r_id in range_mapping.items():
                 if label in cell_val:
                     # Round block (Starts at Col A/0)
-                    price_lists["Round"][r_id] = extract_block(row_idx + 1, 0)
+                    price_lists["Round"][r_id] = extract_block(row_idx, 0)
                     # Fancy block (Starts at Col K/10)
-                    price_lists["Fancy"][r_id] = extract_block(row_idx + 1, 10)
+                    price_lists["Fancy"][r_id] = extract_block(row_idx, 10)
 
         # Save to DB
         config = db.query(models.MasterConfig).filter(models.MasterConfig.user_id == current_user.id).first()
