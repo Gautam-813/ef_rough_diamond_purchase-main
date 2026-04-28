@@ -124,7 +124,7 @@ const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
           <div className="hot-stat-banner">
              🔥 {formatNum(totals.hotCts, 2)} cts in Hot Demand Bands
              <small style={{display:'block', fontSize:10, opacity:0.7}}>
-                {((totals.hotCts / totals.totalCts) * 100).toFixed(1)}% of Polished Weight
+                {formatNum((totals.hotCts / totals.totalCts) * 100, 1)}% of Polished Weight
              </small>
           </div>
        )}
@@ -511,7 +511,7 @@ const PriceMasterView = ({ prices, onUpdate }) => {
 
 // Component to replicate the Excel-style notebook profile from your image
 const TenderProfileHeader = ({ tender, parcel, onParcelUpdate, onTenderUpdate }) => {
-  const avgSize = (parcel.total_cts && parcel.pcs) ? (parcel.total_cts / parcel.pcs).toFixed(4) : "0.0000";
+  const avgSize = (parcel.total_cts && parcel.pcs) ? formatNum(parcel.total_cts / parcel.pcs, 4) : "0.0000";
 
   return (
     <div className="tender-profile-wrap">
@@ -580,7 +580,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                     placeholder="Cts"
                   />
                </div>
-               <span style={{opacity:0.8}}>Scale: <b className="text-gold">x{scaleFactor.toFixed(2)}</b></span>
+               <span style={{opacity:0.8}}>Scale: <b className="text-gold">x{formatNum(scaleFactor, 2)}</b></span>
            </div>
         </div>
 
@@ -654,14 +654,14 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                                          <td><input className="cell-input" style={{width:45}} value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs || ""} onChange={e => onValueChange(range, colour, clarity, 'pcs', e.target.value, shape)} /></td>
                                          <td><input className="cell-input" style={{width:45}} value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts || ""} onChange={e => onValueChange(range, colour, clarity, 'cts', e.target.value, shape)} /></td>
                                          <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700, minWidth:45}}>{wP || ""}</td>
-                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700, minWidth:50}}>{wC.toFixed(2) || ""}</td>
+                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700, minWidth:50}}>{formatNum(wC, 2)}</td>
                                       </React.Fragment>
                                    );
                                 })}
                                 <td className="row-total">{sP}</td>
-                                <td className="row-total">{sC.toFixed(2)}</td>
+                                <td className="row-total">{formatNum(sC, 2)}</td>
                                 <td className="row-total" style={{color:'var(--gold)'}}>{wholeRowP}</td>
-                                <td className="row-total" style={{color:'var(--gold)'}}>{wholeRowC.toFixed(2)}</td>
+                                <td className="row-total" style={{color:'var(--gold)'}}>{formatNum(wholeRowC, 2)}</td>
                              </tr>
                           );
                        })}
@@ -698,15 +698,15 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                            {CLARITY_LIST.map(clarity => (
                               <React.Fragment key={clarity}>
                                  <td style={{color:'var(--text2)'}}>{clarityTotals[clarity].p || "0"}</td>
-                                 <td style={{color:'var(--text2)'}}>{clarityTotals[clarity].c.toFixed(2) || "0.00"}</td>
+                                 <td style={{color:'var(--text2)'}}>{formatNum(clarityTotals[clarity].c, 2) || "0.00"}</td>
                                  <td style={{color:'var(--gold)', background:'rgba(255,255,255,0.02)'}}>{clarityTotals[clarity].wp || "0"}</td>
-                                 <td style={{color:'var(--gold)', background:'rgba(255,255,255,0.02)'}}>{clarityTotals[clarity].wc.toFixed(2) || "0.00"}</td>
+                                 <td style={{color:'var(--gold)', background:'rgba(255,255,255,0.02)'}}>{formatNum(clarityTotals[clarity].wc, 2) || "0.00"}</td>
                               </React.Fragment>
                            ))}
                            <td className="row-total" style={{background:'#1e3a8a', color:'#fff'}}>{gSP}</td>
-                           <td className="row-total" style={{background:'#1e3a8a', color:'#fff'}}>{gSC.toFixed(2)}</td>
+                           <td className="row-total" style={{background:'#1e3a8a', color:'#fff'}}>{formatNum(gSC, 2)}</td>
                            <td className="row-total" style={{background:'var(--card2)', color:'var(--gold)'}}>{gWP}</td>
-                           <td className="row-total" style={{background:'var(--card2)', color:'var(--gold)'}}>{gWC.toFixed(2)}</td>
+                           <td className="row-total" style={{background:'var(--card2)', color:'var(--gold)'}}>{formatNum(gWC, 2)}</td>
                         </tr>
                      );
                   })()}
@@ -770,7 +770,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                 </div>
                 <div className="param-item">
                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Pol Size</label>
-                   <div className="auto-val">{autoAvgSize.toFixed(4)}</div>
+                   <div className="auto-val">{formatNum(autoAvgSize, 4)}</div>
                 </div>
                 <div className="param-item" style={{borderLeft:'1px solid rgba(255,255,255,0.2)', paddingLeft:15}}>
                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Price Range</label>
@@ -809,7 +809,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                   
                                   const roughC = roughC_sample * rangeScaleFactor * cMult;
                                   const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
-                                  const polC = parseFloat((roughC * (yieldPct / 100)).toFixed(2));
+                                  const polC = parseFloat(formatNum(roughC * (yieldPct / 100), 2).replace(/,/g, ''));
                                   
                                   const priceShape = shape === "Round" ? "Round" : "Fancy";
                                   const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
@@ -847,7 +847,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
 
                               const roughC = roughC_sample * rangeScaleFactor * cMult;
                               const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
-                              const polC = parseFloat((roughC * (yieldPct / 100)).toFixed(2));
+                              const polC = parseFloat(formatNum(roughC * (yieldPct / 100), 2).replace(/,/g, ''));
                               
                               const priceShape = shape === "Round" ? "Round" : "Fancy";
                               const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
@@ -994,7 +994,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, tot
                         placeholder="0.0"
                       />
                    </td>
-                   <td style={{color:'var(--text3)'}}>{totalRoughCts > 0 ? ((r.cts / totalRoughCts) * 100).toFixed(1) : 0}%</td>
+                   <td style={{color:'var(--text3)'}}>{totalRoughCts > 0 ? formatNum((r.cts / totalRoughCts) * 100, 1) : 0}%</td>
                    <td>
                       <input 
                         className="cell-input" 
@@ -1017,7 +1017,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, tot
                 <td>Total Rough Cts</td>
                 <td style={{fontSize:16}}>{formatNum(totalRoughCts, 2)}</td>
                 <td></td>
-                <td style={{fontSize:16}}>{totalAvgSize.toFixed(4)}</td>
+                <td style={{fontSize:16}}>{formatNum(totalAvgSize, 4)}</td>
                 <td style={{fontSize:16}}>{totalPcs}</td>
                 <td></td>
              </tr>
@@ -1028,7 +1028,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, tot
              </tr>
              <tr style={{fontWeight:800}}>
                 <td>Yield</td>
-                <td style={{fontSize:16}}>{displayYield.toFixed(1)}%</td>
+                <td style={{fontSize:16}}>{formatNum(displayYield, 1)}%</td>
                 <td colSpan={2}></td>
                 <td style={{border:'1px solid var(--gold)', color:'var(--gold)', fontSize:16}}>{formatNum(totalAvgSize, 3)}</td>
                 <td></td>
@@ -1182,7 +1182,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
               const sCts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
               const cMult = parseFloat(clarityMultipliers[clr]) || 1;
               const roughC = sCts * rangeScaleFactor * cMult; 
-              const polC = parseFloat((roughC * (rYield / 100)).toFixed(2));
+              const polC = parseFloat(formatNum(roughC * (rYield / 100), 2).replace(/,/g, ''));
               
               const priceShape = shape === "Round" ? "Round" : "Fancy";
               const price = globalPrices?.[priceShape]?.[pIdx]?.[col]?.[clr] || 0;
@@ -1324,7 +1324,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                             <NumericInput value={state.sampleWeight} onChange={v => setState({...state, sampleWeight: v})} />
                          </div>
                          <div className="scale-display" style={{marginTop:8, fontSize:10, color:'#fbbf24', textAlign:'center'}}>
-                            Multiplier: <b>{totals.scaleFactor.toFixed(2)}x</b>
+                            Multiplier: <b>{formatNum(totals.scaleFactor, 2)}x</b>
                          </div>
                       </div>
                    )}
