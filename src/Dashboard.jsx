@@ -16,8 +16,69 @@ import AdminPanel from './AdminPanel';
 import ParcelSummaryReport from './components/ParcelSummaryReport';
 import TenderSummaryReport from './components/TenderSummaryReport';
 
+// Helper: Get Price Index (r1-r8) based on weight
+const getPriceIdxByWeight = (w) => {
+  if (w <= 0.004) return "r1";
+  if (w <= 0.008) return "r2";
+  if (w <= 0.021) return "r3";
+  if (w <= 0.051) return "r4";
+  if (w <= 0.077) return "r5";
+  if (w <= 0.115) return "r6";
+  if (w <= 0.158) return "r7";
+  return "r8"; // 0.159+
+};
+
+// Helper: Get MM Range matching BOTH Sieve Name and weight
+// Handles composite names like "-7+5" by combining ranges
+const getMMBySieveAndWeight = (sieveName, weight, chart) => {
+  if (!sieveName || !chart) return "-";
+  
+  // 1. Split composite name into parts (e.g. "-7+5" -> ["-7", "+5"])
+  // This regex finds segments starting with + or - followed by numbers
+  const parts = sieveName.match(/[+-][\d.]+/g) || [sieveName];
+  
+  let allMin = Infinity;
+  let allMax = -Infinity;
+  let foundAny = false;
+
+  parts.forEach(part => {
+     const rows = chart.filter(r => r.sieve.toLowerCase().includes(part.toLowerCase()));
+     if (rows.length === 0) return;
+
+     rows.forEach(row => {
+        const weights = row.weight.split(',').map(w => parseFloat(w.trim()));
+        const mms = row.mm.split(',').map(m => m.trim());
+        
+        // Find best match in this row
+        let bestIdx = 0;
+        let minDiff = Infinity;
+        weights.forEach((w, idx) => {
+           const diff = Math.abs(w - weight);
+           if (diff < minDiff) {
+              minDiff = diff;
+              bestIdx = idx;
+           }
+        });
+
+        const mmStr = mms[bestIdx] || mms[0];
+        // Extract numbers from MM string like "1.55-1.60" or "1.90 to 2.00"
+        const nums = mmStr.match(/[\d.]+/g);
+        if (nums && nums.length >= 2) {
+           const low = parseFloat(nums[0]);
+           const high = parseFloat(nums[1]);
+           if (low < allMin) allMin = low;
+           if (high > allMax) allMax = high;
+           foundAny = true;
+        }
+     });
+  });
+  
+  if (!foundAny) return "-";
+  return `${allMin.toFixed(2)} - ${allMax.toFixed(2)}`;
+};
+
 // Final Valuation Summary (The "Verdict" table from your image)
-const FinalValuationTable = ({ totals, parcelData, state }) => {
+const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
   const perCtPol = parcelData.total_cts > 0 ? (totals.totalValue / parcelData.total_cts) : 0;
   const yieldFactor = (state.yield || 30) / 100;
   const finalBidValue = (perCtPol - (state.labour || 0)) * yieldFactor;
@@ -30,7 +91,26 @@ const FinalValuationTable = ({ totals, parcelData, state }) => {
              <tr><td>Total POL $</td><td className="text-gold">$ {formatNum(totals.totalValue, 2)}</td></tr>
              <tr><td>Rough Cts</td><td>{parcelData.total_cts}</td></tr>
              <tr><td>Per Ct Pol $</td><td>{formatNum(perCtPol, 4)}</td></tr>
-             <tr><td>Labour ($/ct)</td><td>{state.labour}</td></tr>
+             <tr>
+                <td>Labour ($/ct)</td>
+                <td>
+                   <NumericInput 
+                      value={state.labour || 0} 
+                      onChange={v => onUpdate('labour', v)} 
+                      style={{width: '100%', textAlign: 'right', background: 'transparent', border: 'none', color: 'var(--gold)', fontWeight: 700}}
+                   />
+                </td>
+             </tr>
+             <tr>
+                <td>Avg Yield %</td>
+                <td>
+                   <NumericInput 
+                      value={state.yield || 0} 
+                      onChange={v => onUpdate('yield', v)} 
+                      style={{width: '100%', textAlign: 'right', background: 'transparent', border: 'none', color: '#fff'}}
+                   />
+                </td>
+             </tr>
              <tr className="verdict-row">
                 <td style={{fontWeight:800}}>FINAL BID VALUE</td>
                 <td className="text-green" style={{fontSize:18}}>$ {formatNum(finalBidValue, 2)}</td>
@@ -611,9 +691,9 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
 };
 
 // Component for IMAGE 2: Polish Calculation
-const PolishTable = ({ range, state, prices, onUpdateConfig }) => {
+const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, sizeChart }) => {
   const rangeCfg = state.rangeConfig?.[range] || { yield: 44, labour: 35, profit: 15, multiplier: 1 };
-  const yieldPct = parseFloat(rangeCfg.yield) || 44;
+  const yieldPct = parseFloat(state.yield) || 44; // Use global yield
   const multiplier = parseFloat(rangeCfg.multiplier) || (state.strategy === 'Whole' ? 1 : 2);
   const selectedShapes = rangeCfg.selectedShapes || ["Round"];
   
@@ -621,10 +701,12 @@ const PolishTable = ({ range, state, prices, onUpdateConfig }) => {
   const targetCts = parseFloat(target.cts) || 0;
 
   let sampleTotalCts = 0;
+  let sampleTotalPcs = 0;
   COLOUR_LIST.forEach(col => {
     selectedShapes.forEach(shape => {
       CLARITY_LIST.forEach(clr => {
         sampleTotalCts += parseFloat(state.table?.[range]?.[col]?.[shape]?.[clr]?.cts) || 0;
+        sampleTotalPcs += parseFloat(state.table?.[range]?.[col]?.[shape]?.[clr]?.pcs) || 0;
       });
     });
   });
@@ -645,6 +727,8 @@ const PolishTable = ({ range, state, prices, onUpdateConfig }) => {
   });
   
   const autoAvgSize = totalP > 0 ? (totalC / totalP) : 0;
+  const pIdx = getPriceIdxByWeight(autoAvgSize);
+  const polMM = getMMBySieveAndWeight(range, autoAvgSize, sizeChart);
   
   return (
     <div className="card glass category-card" style={{marginBottom: 24}}>
@@ -655,19 +739,23 @@ const PolishTable = ({ range, state, prices, onUpdateConfig }) => {
              <div className="header-params" style={{display:'flex', gap:20, alignItems:'center'}}>
                 <div className="param-item">
                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Yield %</label>
-                   <input className="hdr-input" value={rangeCfg.yield || ""} onChange={e => onUpdateConfig(range, 'yield', e.target.value)} />
+                   <input className="hdr-input" value={state.yield || ""} onChange={e => onGlobalUpdate('yield', e.target.value)} />
                 </div>
                 <div className="param-item">
                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Stone Multiplier</label>
                    <input className="hdr-input" value={rangeCfg.multiplier || ""} onChange={e => onUpdateConfig(range, 'multiplier', e.target.value)} />
                 </div>
                 <div className="param-item">
+                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>POL MM</label>
+                   <div className="auto-val" style={{color:'#fff', fontWeight:800}}>{polMM}</div>
+                </div>
+                <div className="param-item">
                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Pol Size</label>
                    <div className="auto-val">{autoAvgSize.toFixed(4)}</div>
                 </div>
                 <div className="param-item" style={{borderLeft:'1px solid rgba(255,255,255,0.2)', paddingLeft:15}}>
-                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Scaling</label>
-                   <b style={{fontSize:14}}>x{rangeScaleFactor.toFixed(2)}</b>
+                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Price Range</label>
+                   <b style={{fontSize:14, color:'var(--gold)'}}>{pIdx.toUpperCase()}</b>
                 </div>
              </div>
           </div>
@@ -703,8 +791,8 @@ const PolishTable = ({ range, state, prices, onUpdateConfig }) => {
                                   const polP = Math.round((roughP_sample * rangeScaleFactor) * multiplier);
                                   const polC = parseFloat((roughC * (yieldPct / 100)).toFixed(2));
                                   
-                                  const sieveDef = SIEVE_RANGES[range];
-                                  const price = prices?.[shape]?.[sieveDef?.priceIdx || "s1"]?.[colour]?.[clarity] || 0;
+                                  const priceShape = shape === "Round" ? "Round" : "Fancy";
+                                  const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
                                   
                                   const totalVal = polC * price;
                                   rowP += polP; rowC += polC; rowV += totalVal;
@@ -738,8 +826,9 @@ const PolishTable = ({ range, state, prices, onUpdateConfig }) => {
                               const roughC = roughC_sample * rangeScaleFactor;
                               const polP = Math.round((roughP_sample * rangeScaleFactor) * multiplier);
                               const polC = parseFloat((roughC * (yieldPct / 100)).toFixed(2));
-                              const sieveDef = SIEVE_RANGES[range];
-                              const price = prices?.[shape]?.[sieveDef?.priceIdx || "s1"]?.[colour]?.[clarity] || 0;
+                              
+                              const priceShape = shape === "Round" ? "Round" : "Fancy";
+                              const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
                               const v = polC * price;
                               
                               clarityTotals[clarity].p += polP;
@@ -1038,20 +1127,29 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
       
       const rCfg = state.rangeConfig?.[r] || {};
       const selectedShapes = rCfg.selectedShapes || ["Round"];
-      const rYield = parseFloat(rCfg.yield) || 44;
+      const rYield = parseFloat(state.yield) || 44; // Use GLOBAL yield
 
       let rSampleCts = 0;
+      let rSamplePcs = 0;
       COLOUR_LIST.forEach(col => {
         selectedShapes.forEach(shape => {
           CLARITY_LIST.forEach(clr => {
-            rSampleCts += parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
+            const cts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
+            const pcs = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
+            rSampleCts += cts;
+            rSamplePcs += pcs;
           });
         });
       });
 
       const rangeScaleFactor = (targetCts > 0 && rSampleCts > 0) ? (targetCts / rSampleCts) : 1;
-      const sieveDef = SIEVE_RANGES[r];
-      const pIdx = sieveDef?.priceIdx || "s1";
+      
+      // Calculate dynamic category-wide avg pol size to find the price index
+      const multiplier = parseFloat(rCfg.multiplier) || (state.strategy === 'Whole' ? 1 : 2);
+      const polCts = rSampleCts * rangeScaleFactor * (rYield / 100);
+      const polPcs = Math.round((rSamplePcs * rangeScaleFactor) * multiplier);
+      const avgPolSize = polPcs > 0 ? (polCts / polPcs) : 0;
+      const pIdx = getPriceIdxByWeight(avgPolSize);
 
       COLOUR_LIST.forEach(col => {
         selectedShapes.forEach(shape => {
@@ -1060,7 +1158,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
               const roughC = sCts * rangeScaleFactor; 
               const polC = parseFloat((roughC * (rYield / 100)).toFixed(2));
               
-               const priceShape = shape === "Round" ? "Round" : "Fancy";
+              const priceShape = shape === "Round" ? "Round" : "Fancy";
               const price = globalPrices?.[priceShape]?.[pIdx]?.[col]?.[clr] || 0;
               
               totalCts += polC;
@@ -1163,9 +1261,14 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
           </div>
        </div>
 
-       <div className="calc-grid">
+        <div className="calc-grid">
           <div className="calc-sidebar">
-             <FinalValuationTable totals={totals} parcelData={parcelData} state={state} />
+             <FinalValuationTable 
+                totals={totals} 
+                parcelData={parcelData} 
+                state={state} 
+                onUpdate={(field, val) => setState({...state, [field]: val})}
+             />
              
              <div className="card glass">
                 <div className="card-hdr">Sample Extrapolation</div>
@@ -1285,11 +1388,21 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                 </div>
              )}
              {activeTab === 'polish' && (
-                 <div className="category-stack">
-                    <div className="section-hdr"><h2 className="title-glow">Polished Yield Calculation (Image 2)</h2></div>
-                    {state.ranges.map(r => <PolishTable key={r} range={r} state={state} prices={globalPrices} onUpdateConfig={handleConfigChange} />)}
-                 </div>
-              )}
+                <div className="category-stack">
+                   <div className="section-hdr"><h2 className="title-glow">Polished Yield Calculation (Image 2)</h2></div>
+                   {state.ranges.map(r => (
+                      <PolishTable 
+                         key={r} 
+                         range={r} 
+                         state={state} 
+                         prices={globalPrices} 
+                         sizeChart={state.sizeChart || MASTER_SIZE_CHART}
+                         onUpdateConfig={handleConfigChange} 
+                         onGlobalUpdate={(field, val) => setState({...state, [field]: val})}
+                      />
+                   ))}
+                </div>
+             )}
              {activeTab === 'prices' && (
                 <PriceMasterView prices={globalPrices} onUpdate={onUpdateGlobalPrices} />
              )}
