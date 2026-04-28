@@ -492,7 +492,7 @@ const PriceMasterView = ({ prices, onUpdate }) => {
                             <input 
                               className="cell-input" 
                               style={{textAlign:'center', background:'transparent', border:'none', color:'#fff', width:'100%'}}
-                              value={currentGrid[col]?.[clr] !== undefined ? Number(currentGrid[col][clr]).toFixed(2) : ""}
+                              value={currentGrid[col]?.[clr] !== undefined ? formatNum(currentGrid[col][clr], 2) : ""}
                               onChange={e => handlePriceChange(col, clr, e.target.value)}
                             />
                          </td>
@@ -799,15 +799,15 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                   return (
                                      <React.Fragment key={clarity}>
                                         <td>{polP || ""}</td>
-                                        <td>{polC.toFixed(2) || ""}</td>
-                                        <td>{price || ""}</td>
-                                        <td className="text-gold">{totalVal.toFixed(2) || ""}</td>
+                                        <td>{formatNum(polC, 2)}</td>
+                                        <td>{formatNum(price, 2)}</td>
+                                        <td className="text-gold">{formatNum(totalVal, 2)}</td>
                                      </React.Fragment>
                                   );
                                })}
                                <td className="row-total">{rowP}</td>
-                               <td className="row-total">{rowC.toFixed(2)}</td>
-                                <td className="row-total text-green">${rowV.toFixed(2)}</td>
+                               <td className="row-total">{formatNum(rowC, 2)}</td>
+                                <td className="row-total text-green">$ {formatNum(rowV, 2)}</td>
                              </tr>
                          );
                       })}
@@ -845,14 +845,14 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                            {CLARITY_LIST.map(clarity => (
                               <React.Fragment key={clarity}>
                                  <td>{clarityTotals[clarity].p || "0"}</td>
-                                 <td>{clarityTotals[clarity].c.toFixed(2) || "0.00"}</td>
+                                 <td>{formatNum(clarityTotals[clarity].c, 2)}</td>
                                  <td style={{background:'rgba(255,255,255,0.02)', opacity:0.5}}>-</td>
-                                 <td className="text-gold">{clarityTotals[clarity].v.toFixed(2) || "0.00"}</td>
+                                 <td className="text-gold">{formatNum(clarityTotals[clarity].v, 2)}</td>
                               </React.Fragment>
                            ))}
                            <td className="row-total" style={{background:'#166534', color:'#fff'}}>{gP}</td>
-                           <td className="row-total" style={{background:'#166534', color:'#fff'}}>{gC.toFixed(2)}</td>
-                           <td className="row-total text-green" style={{background:'#166534', color:'#fff', fontSize:14}}>${gV.toFixed(2)}</td>
+                           <td className="row-total" style={{background:'#166534', color:'#fff'}}>{formatNum(gC, 2)}</td>
+                           <td className="row-total text-green" style={{background:'#166534', color:'#fff', fontSize:14}}>$ {formatNum(gV, 2)}</td>
                         </tr>
                      );
                   })()}
