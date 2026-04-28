@@ -15,6 +15,7 @@ import { formatNum } from './utils/calculations';
 import AdminPanel from './AdminPanel';
 import ParcelSummaryReport from './components/ParcelSummaryReport';
 import TenderSummaryReport from './components/TenderSummaryReport';
+import ParcelComparisonReport from './components/ParcelComparisonReport';
 
 // Helper: Get Price Index (r1-r8) based on weight
 const getPriceIdxByWeight = (w) => {
@@ -143,6 +144,7 @@ export default function Dashboard() {
   const [masterConfig, setMasterConfig] = useState(null);
   const [globalPrices, setGlobalPrices] = useState(PRICE_LISTS); // Default fallback
   const [showTenderSummary, setShowTenderSummary] = useState(false);
+  const [showParcelComparison, setShowParcelComparison] = useState(false);
 
   // Apply theme
   useEffect(() => {
@@ -327,16 +329,45 @@ export default function Dashboard() {
              <div className="section-hdr">
                 <h2>{activeTender.name} <span style={{opacity:0.3, fontSize:14}}>(ID: {activeTender.id})</span></h2>
                  <div style={{display:'flex', gap:10}}>
-                    <button className={`btn ${showTenderSummary ? 'btn-gold' : 'btn-outline'}`} onClick={() => setShowTenderSummary(!showTenderSummary)}>
-                      {showTenderSummary ? '📊 Show List' : '📋 Notebook Summary'}
-                    </button>
-                    <button className="btn btn-primary" onClick={handleCreateParcel}>+ New Parcel</button>
+                     <button className={`btn ${showTenderSummary ? 'btn-gold' : 'btn-outline'}`} onClick={() => {
+                       setShowTenderSummary(!showTenderSummary);
+                       if (!showTenderSummary) setShowParcelComparison(false); // Hide comparison when showing summary
+                     }}>
+                       {showTenderSummary ? '📊 Show List' : '📋 Notebook Summary'}
+                     </button>
+                     <button className={`btn ${showParcelComparison ? 'btn-blue' : 'btn-outline'}`} onClick={() => {
+                       setShowParcelComparison(!showParcelComparison);
+                       if (!showParcelComparison) setShowTenderSummary(false); // Hide summary when showing comparison
+                     }}>
+                       {showParcelComparison ? '📋 Show List' : '📊 Compare Parcels'}
+                     </button>
+                     <button className="btn btn-primary" onClick={handleCreateParcel}>+ New Parcel</button>
                     <button className="btn btn-outline" onClick={() => setView('home')}>← Back</button>
                  </div>
               </div>
-              {showTenderSummary ? (
-                <TenderSummaryReport tender={activeTender} parcels={activeTender.parcels} prices={globalPrices} />
-              ) : (
+                {showTenderSummary ? (
+                  <div className="tender-summary-view">
+                    <div className="section-hdr" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <h2 className="title-glow">Tender Summary Report</h2>
+                      <button className="btn btn-gold" onClick={() => {
+                        const element = document.querySelector('.tender-summary-container');
+                        const opt = {
+                          margin: 0.5,
+                          filename: `tender_summary_${activeTender.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+                          image: { type: 'jpeg', quality: 0.98 },
+                          html2canvas: { scale: 2, useCORS: true },
+                          jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+                        };
+                        import('html2pdf.js').then(html2pdf => {
+                          html2pdf.default().set(opt).from(element).save();
+                        });
+                      }}>📄 Download PDF</button>
+                    </div>
+                    <TenderSummaryReport tender={activeTender} parcels={activeTender.parcels} prices={globalPrices} />
+                  </div>
+                ) : showParcelComparison ? (
+                 <ParcelComparisonReport parcels={activeTender.parcels} tender={activeTender} prices={globalPrices} />
+               ) : (
                 <div className="card glass">
                   <table className="ef-table">
                     <thead>
@@ -1475,7 +1506,19 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                 <div className="summary-report-view">
                    <div className="section-hdr" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                       <h2 className="title-glow">Parcel Purchase Summary</h2>
-                      <button className="btn btn-gold" onClick={() => window.print()}>🖨 Print Report</button>
+                       <button className="btn btn-gold" onClick={() => {
+                         const element = document.querySelector('.summary-report-container');
+                         const opt = {
+                           margin: 0.5,
+                           filename: `parcel_summary_${parcelData.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+                           image: { type: 'jpeg', quality: 0.98 },
+                           html2canvas: { scale: 2, useCORS: true },
+                           jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                         };
+                         import('html2pdf.js').then(html2pdf => {
+                           html2pdf.default().set(opt).from(element).save();
+                         });
+                       }}>📄 Download PDF</button>
                    </div>
                    <ParcelSummaryReport 
                      parcel={parcelData} 

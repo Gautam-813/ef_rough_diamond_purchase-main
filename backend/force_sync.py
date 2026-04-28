@@ -15,7 +15,9 @@ def force_sync():
         print(f"Error: {excel_path} not found")
         return
 
-    df = pd.read_excel(excel_path, sheet_name=0, header=None)
+    # Read both Round and Fancy sheets
+    df_round = pd.read_excel(excel_path, sheet_name="Round", header=None)
+    df_fancy = pd.read_excel(excel_path, sheet_name="Fancy", header=None)
 
     colors = ["DEF", "G", "H", "I", "J", "K", "L", "M", "CAPE"]
     clarities = ["VVS", "VS1", "VS2", "SI1", "SI2", "I1", "I2"]
@@ -29,7 +31,7 @@ def force_sync():
         "0.052-0.077": "r5", "0.078-0.115": "r6", "0.116-0.158": "r7", "0.159": "r8"
     }
 
-    def extract_block(start_row, shape_col_offset):
+    def extract_block(df, start_row, shape_col_offset):
         block = {}
         # Scan the next 12 rows to find all matching colors (each range block is about 10-12 rows)
         for offset in range(1, 13):
@@ -67,15 +69,20 @@ def force_sync():
         return block
 
     price_lists = {"Round": {}, "Fancy": {}}
-    for row_idx in range(len(df)):
-        cell_val = str(df.iloc[row_idx, 1])
+
+    # Extract Round prices
+    for row_idx in range(len(df_round)):
+        cell_val = str(df_round.iloc[row_idx, 1]).strip()
         for label, r_id in range_mapping.items():
             if label in cell_val:
-                price_lists["Round"][r_id] = extract_block(row_idx + 1, 0)
-                price_lists["Fancy"][r_id] = extract_block(row_idx + 1, 11)
+                price_lists["Round"][r_id] = extract_block(df_round, row_idx + 1, 0)
 
-    print(f"Extracted price_lists keys: Round={list(price_lists['Round'].keys())}, Fancy={list(price_lists['Fancy'].keys())}")
-    print(f"Sample Round r4 DEF: {price_lists.get('Round', {}).get('r4', {}).get('DEF', {})}")
+    # Extract Fancy prices
+    for row_idx in range(len(df_fancy)):
+        cell_val = str(df_fancy.iloc[row_idx, 1]).strip()
+        for label, r_id in range_mapping.items():
+            if label in cell_val:
+                price_lists["Fancy"][r_id] = extract_block(df_fancy, row_idx + 1, 0)
 
     # Save to all users (just to be safe)
     users = db.query(models.User).all()
@@ -95,14 +102,6 @@ def force_sync():
     try:
         db.commit()
         print("SUCCESS: Prices Forced into DB for all users")
-
-        # Verify the data was saved
-        configs = db.query(models.MasterConfig).all()
-        for config in configs:
-            print(f"User {config.user_id} price_overrides: {bool(config.price_overrides)} {type(config.price_overrides)}")
-            if config.price_overrides:
-                print(f"Keys: {list(config.price_overrides.keys()) if isinstance(config.price_overrides, dict) else 'not dict'}")
-
     except Exception as e:
         print(f"ERROR during commit: {e}")
         db.rollback()

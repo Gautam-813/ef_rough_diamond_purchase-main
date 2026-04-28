@@ -5,6 +5,21 @@ import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES } from '../constants/diamondDat
 const TenderSummaryReport = ({ tender, parcels, prices }) => {
   if (!parcels || parcels.length === 0) return <div className="p-20 text-center">No parcels in this notebook to summarize.</div>;
 
+  const handleDownloadPDF = () => {
+    const element = document.querySelector('.tender-summary-container');
+    const opt = {
+      margin: 0.5,
+      filename: `tender_summary_${tender.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+    };
+
+    import('html2pdf.js').then(html2pdf => {
+      html2pdf.default().set(opt).from(element).save();
+    });
+  };
+
   // --- CALCULATION LOGIC (Aggregated) ---
   let grandTotalRough = 0;
   let grandTotalPol = 0;
