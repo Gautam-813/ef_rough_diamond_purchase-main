@@ -28,53 +28,56 @@ const getPriceIdxByWeight = (w) => {
   return "r8"; // 0.159+
 };
 
-// Helper: Get MM Range matching BOTH Sieve Name and weight
-// Handles composite names like "-7+5" by combining ranges
-const getMMBySieveAndWeight = (sieveName, weight, chart) => {
-  if (!sieveName || !chart) return "-";
+// Helper: Get MM Range based SOLELY on weight markers in the size chart
+const getMMByWeight = (weight, chart) => {
+  if (!chart || chart.length === 0 || weight <= 0) return "-";
   
-  // 1. Split composite name into parts (e.g. "-7+5" -> ["-7", "+5"])
-  // This regex finds segments starting with + or - followed by numbers
-  const parts = sieveName.match(/[+-][\d.]+/g) || [sieveName];
-  
-  let allMin = Infinity;
-  let allMax = -Infinity;
-  let foundAny = false;
-
-  parts.forEach(part => {
-     const rows = chart.filter(r => r.sieve.toLowerCase().includes(part.toLowerCase()));
-     if (rows.length === 0) return;
-
-     rows.forEach(row => {
-        const weights = row.weight.split(',').map(w => parseFloat(w.trim()));
-        const mms = row.mm.split(',').map(m => m.trim());
-        
-        // Find best match in this row
-        let bestIdx = 0;
-        let minDiff = Infinity;
-        weights.forEach((w, idx) => {
-           const diff = Math.abs(w - weight);
-           if (diff < minDiff) {
-              minDiff = diff;
-              bestIdx = idx;
-           }
-        });
-
-        const mmStr = mms[bestIdx] || mms[0];
-        // Extract numbers from MM string like "1.55-1.60" or "1.90 to 2.00"
-        const nums = mmStr.match(/[\d.]+/g);
-        if (nums && nums.length >= 2) {
-           const low = parseFloat(nums[0]);
-           const high = parseFloat(nums[1]);
-           if (low < allMin) allMin = low;
-           if (high > allMax) allMax = high;
-           foundAny = true;
+  // 1. Flatten all markers into a simple sorted list of {weight, mm}
+  const markers = [];
+  chart.forEach(row => {
+     const weights = row.weight.split(',').map(w => parseFloat(w.trim()));
+     const mms = row.mm.split(',').map(m => m.trim());
+     weights.forEach((w, idx) => {
+        if (!isNaN(w) && mms[idx]) {
+           markers.push({ weight: w, mm: mms[idx] });
         }
      });
   });
-  
-  if (!foundAny) return "-";
-  return `${allMin.toFixed(2)} - ${allMax.toFixed(2)}`;
+
+  if (markers.length === 0) return "-";
+  markers.sort((a, b) => a.weight - b.weight);
+
+  // 2. Find the "Sandwich" markers
+  let lower = null;
+  let upper = null;
+
+  for (let i = 0; i < markers.length; i++) {
+     if (markers[i].weight <= weight) {
+        lower = markers[i];
+     }
+     if (markers[i].weight >= weight) {
+        upper = markers[i];
+        break; // Found the first one above or equal
+     }
+  }
+
+  // Handle edge cases (target weight outside chart bounds)
+  if (!lower) lower = markers[0];
+  if (!upper) upper = markers[markers.length - 1];
+
+  // 3. Extract MM Start and MM End
+  // e.g. "1.80-1.90" -> start=1.80, end=1.90
+  const getMMBounds = (mmStr) => {
+     const nums = mmStr.match(/[\d.]+/g);
+     if (!nums || nums.length < 1) return { start: "?", end: "?" };
+     return { start: nums[0], end: nums[1] || nums[0] };
+  };
+
+  const lowerBounds = getMMBounds(lower.mm);
+  const upperBounds = getMMBounds(upper.mm);
+
+  if (lower === upper) return lower.mm;
+  return `${lowerBounds.start} - ${upperBounds.end} mm`;
 };
 
 // Final Valuation Summary (The "Verdict" table from your image)
@@ -531,7 +534,7 @@ const TenderProfileHeader = ({ tender, parcel, onParcelUpdate, onTenderUpdate })
 };
 
 // Component for IMAGE 1: Rough Assortment Input
-const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdateConfig }) => {
+const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdateConfig, onClarityMultiplierChange }) => {
   const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
   const targetCts = parseFloat(target.cts) || 0;
   const targetPcs = target.avg > 0 ? Math.round(targetCts / target.avg) : 0;
@@ -542,6 +545,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
   const rangeCfg = state.rangeConfig?.[range] || {};
   const selectedShapes = rangeCfg.selectedShapes || ["Round"];
   const availableShapes = ["Round", "Pear/Oval", "Baguette", "Triangles"];
+  const clarityMultipliers = rangeCfg.clarityMultipliers || {};
 
   const toggleShape = (shape) => {
     let next = [...selectedShapes];
@@ -596,7 +600,23 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                  <tr>
                     <th rowSpan="2" style={{width:80}}>Assortment</th>
                     <th rowSpan="2" style={{width:100}}>Shape</th>
-                    {CLARITY_LIST.map(c => <th key={c} colSpan="4" style={{fontSize:9, background:'var(--bg2)'}}>{c}</th>)}
+                    {CLARITY_LIST.map(c => (
+                       <th key={c} colSpan="4" style={{fontSize:9, background:'var(--bg2)', padding:'5px 2px'}}>
+                          <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:4}}>
+                             <span>{c}</span>
+                             <div style={{display:'flex', alignItems:'center', gap:2, background:'rgba(255,255,255,0.05)', padding:'1px 4px', borderRadius:3, border:'1px solid rgba(255,255,255,0.1)'}}>
+                                <span style={{fontSize:8, opacity:0.6}}>x</span>
+                                <input 
+                                   className="cell-input" 
+                                   style={{width:30, fontSize:10, color:'var(--gold)', textAlign:'center'}} 
+                                   value={clarityMultipliers[c] || ""} 
+                                   onChange={e => onClarityMultiplierChange(range, c, e.target.value)}
+                                   placeholder="1.0"
+                                />
+                             </div>
+                          </div>
+                       </th>
+                    ))}
                     <th colSpan="2" style={{background:'#1e3a8a', color:'#fff'}}>Sample Total</th>
                     <th colSpan="2" style={{background:'var(--card2)', color:'var(--gold)'}}>Whole Total</th>
                  </tr>
@@ -616,6 +636,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                     <React.Fragment key={colour}>
                        {selectedShapes.map((shape, sIdx) => {
                           let sP = 0; let sC = 0;
+                          let wholeRowP = 0; let wholeRowC = 0;
                           return (
                              <tr key={`${colour}-${shape}`}>
                                 {sIdx === 0 && <td rowSpan={selectedShapes.length} className="rng-cell" style={{verticalAlign:'middle', background:'rgba(255,255,255,0.02)'}}>{colour}</td>}
@@ -623,22 +644,24 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                                 {CLARITY_LIST.map(clarity => {
                                    const p = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                                    const c = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-                                   const wP = Math.round(p * scaleFactor);
-                                   const wC = c * scaleFactor;
+                                   const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                                   const wP = Math.round(p * scaleFactor * cMult);
+                                   const wC = c * scaleFactor * cMult;
                                    sP += p; sC += c;
+                                   wholeRowP += wP; wholeRowC += wC;
                                    return (
                                       <React.Fragment key={clarity}>
                                          <td><input className="cell-input" value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs || ""} onChange={e => onValueChange(range, colour, clarity, 'pcs', e.target.value, shape)} /></td>
                                          <td><input className="cell-input" value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts || ""} onChange={e => onValueChange(range, colour, clarity, 'cts', e.target.value, shape)} /></td>
-                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--text3)'}}>{wP || ""}</td>
-                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--text3)'}}>{wC.toFixed(2) || ""}</td>
+                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700}}>{wP || ""}</td>
+                                         <td style={{background:'rgba(255,255,255,0.03)', color:'var(--gold)', fontWeight:700}}>{wC.toFixed(2) || ""}</td>
                                       </React.Fragment>
                                    );
                                 })}
                                 <td className="row-total">{sP}</td>
                                 <td className="row-total">{sC.toFixed(2)}</td>
-                                <td className="row-total" style={{color:'var(--gold)'}}>{Math.round(sP * scaleFactor)}</td>
-                                <td className="row-total" style={{color:'var(--gold)'}}>{(sC * scaleFactor).toFixed(2)}</td>
+                                <td className="row-total" style={{color:'var(--gold)'}}>{wholeRowP}</td>
+                                <td className="row-total" style={{color:'var(--gold)'}}>{wholeRowC.toFixed(2)}</td>
                              </tr>
                           );
                        })}
@@ -654,16 +677,20 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                            CLARITY_LIST.forEach(clarity => {
                               const p = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                               const c = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+                              const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                              const wp = Math.round(p * scaleFactor * cMult);
+                              const wc = (c * scaleFactor * cMult);
+                              
                               clarityTotals[clarity].p += p;
                               clarityTotals[clarity].c += c;
-                              clarityTotals[clarity].wp += Math.round(p * scaleFactor);
-                              clarityTotals[clarity].wc += (c * scaleFactor);
+                              clarityTotals[clarity].wp += wp;
+                              clarityTotals[clarity].wc += wc;
+                              
                               gSP += p; gSC += c;
+                              gWP += wp; gWC += wc;
                            });
                         });
                      });
-                     gWP = Math.round(gSP * scaleFactor);
-                     gWC = gSC * scaleFactor;
 
                      return (
                         <tr style={{fontWeight:800, background:'rgba(30,58,138,0.2)'}}>
@@ -672,8 +699,8 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                               <React.Fragment key={clarity}>
                                  <td style={{color:'var(--text2)'}}>{clarityTotals[clarity].p || "0"}</td>
                                  <td style={{color:'var(--text2)'}}>{clarityTotals[clarity].c.toFixed(2) || "0.00"}</td>
-                                 <td style={{color:'var(--text3)', background:'rgba(255,255,255,0.02)'}}>{clarityTotals[clarity].wp || "0"}</td>
-                                 <td style={{color:'var(--text3)', background:'rgba(255,255,255,0.02)'}}>{clarityTotals[clarity].wc.toFixed(2) || "0.00"}</td>
+                                 <td style={{color:'var(--gold)', background:'rgba(255,255,255,0.02)'}}>{clarityTotals[clarity].wp || "0"}</td>
+                                 <td style={{color:'var(--gold)', background:'rgba(255,255,255,0.02)'}}>{clarityTotals[clarity].wc.toFixed(2) || "0.00"}</td>
                               </React.Fragment>
                            ))}
                            <td className="row-total" style={{background:'#1e3a8a', color:'#fff'}}>{gSP}</td>
@@ -692,10 +719,11 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
 
 // Component for IMAGE 2: Polish Calculation
 const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, sizeChart }) => {
-  const rangeCfg = state.rangeConfig?.[range] || { yield: 44, labour: 35, profit: 15, multiplier: 1 };
+  const rangeCfg = state.rangeConfig?.[range] || { yield: 44, labour: 35, profit: 15, multiplier: 1, clarityMultipliers: {} };
   const yieldPct = parseFloat(state.yield) || 44; // Use global yield
   const multiplier = parseFloat(rangeCfg.multiplier) || (state.strategy === 'Whole' ? 1 : 2);
   const selectedShapes = rangeCfg.selectedShapes || ["Round"];
+  const clarityMultipliers = rangeCfg.clarityMultipliers || {};
   
   const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
   const targetCts = parseFloat(target.cts) || 0;
@@ -720,15 +748,16 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
         CLARITY_LIST.forEach(clarity => {
            const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
            const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
-           totalP += Math.round((roughP_sample * rangeScaleFactor) * multiplier);
-           totalC += (roughC_sample * rangeScaleFactor) * (yieldPct / 100);
+           const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+           totalP += Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
+           totalC += (roughC_sample * rangeScaleFactor * cMult) * (yieldPct / 100);
         });
      });
   });
   
   const autoAvgSize = totalP > 0 ? (totalC / totalP) : 0;
   const pIdx = getPriceIdxByWeight(autoAvgSize);
-  const polMM = getMMBySieveAndWeight(range, autoAvgSize, sizeChart);
+  const polMM = getMMByWeight(autoAvgSize, sizeChart);
   
   return (
     <div className="card glass category-card" style={{marginBottom: 24}}>
@@ -786,9 +815,10 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                {CLARITY_LIST.map(clarity => {
                                   const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                                   const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+                                  const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
                                   
-                                  const roughC = roughC_sample * rangeScaleFactor;
-                                  const polP = Math.round((roughP_sample * rangeScaleFactor) * multiplier);
+                                  const roughC = roughC_sample * rangeScaleFactor * cMult;
+                                  const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
                                   const polC = parseFloat((roughC * (yieldPct / 100)).toFixed(2));
                                   
                                   const priceShape = shape === "Round" ? "Round" : "Fancy";
@@ -823,8 +853,10 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                            CLARITY_LIST.forEach(clarity => {
                               const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                               const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-                              const roughC = roughC_sample * rangeScaleFactor;
-                              const polP = Math.round((roughP_sample * rangeScaleFactor) * multiplier);
+                              const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+
+                              const roughC = roughC_sample * rangeScaleFactor * cMult;
+                              const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
                               const polC = parseFloat((roughC * (yieldPct / 100)).toFixed(2));
                               
                               const priceShape = shape === "Round" ? "Round" : "Fancy";
@@ -860,7 +892,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
           </table>
        </div>
     </div>
-  );
+   );
 };
 
 // COMPONENT: Size Chart View (Editable Master Table)
@@ -1128,6 +1160,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
       const rCfg = state.rangeConfig?.[r] || {};
       const selectedShapes = rCfg.selectedShapes || ["Round"];
       const rYield = parseFloat(state.yield) || 44; // Use GLOBAL yield
+      const clarityMultipliers = rCfg.clarityMultipliers || {};
 
       let rSampleCts = 0;
       let rSamplePcs = 0;
@@ -1136,8 +1169,9 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
           CLARITY_LIST.forEach(clr => {
             const cts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
             const pcs = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
-            rSampleCts += cts;
-            rSamplePcs += pcs;
+            const cMult = parseFloat(clarityMultipliers[clr]) || 1;
+            rSampleCts += cts * cMult;
+            rSamplePcs += pcs * cMult;
           });
         });
       });
@@ -1155,7 +1189,8 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
         selectedShapes.forEach(shape => {
            CLARITY_LIST.forEach(clr => {
               const sCts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
-              const roughC = sCts * rangeScaleFactor; 
+              const cMult = parseFloat(clarityMultipliers[clr]) || 1;
+              const roughC = sCts * rangeScaleFactor * cMult; 
               const polC = parseFloat((roughC * (rYield / 100)).toFixed(2));
               
               const priceShape = shape === "Round" ? "Round" : "Fancy";
@@ -1191,8 +1226,16 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
 
   const handleConfigChange = (range, field, val) => {
     const next = { ...state.rangeConfig };
-    if (!next[range]) next[range] = { yield: 44, labour: 35, profit: 15, multiplier: 1, selectedShapes: ["Round"] };
+    if (!next[range]) next[range] = { yield: 44, labour: 35, profit: 15, multiplier: 1, selectedShapes: ["Round"], clarityMultipliers: {} };
     next[range][field] = val;
+    setState({ ...state, rangeConfig: next });
+  };
+
+  const handleClarityMultiplierChange = (range, clarity, val) => {
+    const next = { ...state.rangeConfig };
+    if (!next[range]) next[range] = { yield: 44, labour: 35, profit: 15, multiplier: 1, selectedShapes: ["Round"], clarityMultipliers: {} };
+    if (!next[range].clarityMultipliers) next[range].clarityMultipliers = {};
+    next[range].clarityMultipliers[clarity] = val;
     setState({ ...state, rangeConfig: next });
   };
 
@@ -1382,6 +1425,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                             onValueChange={handleValueChange} 
                             onSampleChange={handleSampleChange}
                             onUpdateConfig={handleConfigChange}
+                            onClarityMultiplierChange={handleClarityMultiplierChange}
                           />
                       </div>
                    ))}
