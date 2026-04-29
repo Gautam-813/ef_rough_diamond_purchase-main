@@ -80,9 +80,13 @@ const ParcelComparisonReport = ({ parcels, tender, prices }) => {
 
     const labour = parseFloat(state.labour) || 0;
     const profit = parseFloat(state.profit_margin) || 0;
+
+    // Calculate rough cost per ct (polish value per rough ct)
     const polPerRough = polVal / roughCts;
-    const roughCost = polPerRough - labour;
-    const finalBid = roughCost * (1 - profit / 100);
+
+    // Apply profit margin to rough cost, then subtract labour
+    const profitAdjustedCost = polPerRough * (1 - profit / 100);
+    const finalBid = (profitAdjustedCost - labour);
 
     return {
       id: parcel.id,

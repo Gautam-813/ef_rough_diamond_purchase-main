@@ -71,7 +71,13 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
 
     const labour = parseFloat(state.labour) || 0;
     const profit = parseFloat(state.profit_margin) || 0;
-    const bid = (pVal / pRough - labour) * (1 - profit / 100) * pRough;
+
+    // Calculate rough cost per ct (polish value per rough ct)
+    const roughCostPerCt = pVal / pRough;
+
+    // Apply profit margin to rough cost, then subtract labour
+    const profitAdjustedCost = roughCostPerCt * (1 - profit / 100);
+    const bid = (profitAdjustedCost - labour) * pRough;
 
     grandTotalRough += pRough;
     grandTotalPol += pPol;

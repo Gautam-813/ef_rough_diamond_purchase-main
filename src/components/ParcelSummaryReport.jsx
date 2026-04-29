@@ -73,7 +73,13 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
   const labourPerRoughCt = parseFloat(state.labour) || 0;
   const profitMarginPct = parseFloat(state.profit_margin) || 0;
   const totalLabour = totalRoughCts * labourPerRoughCt;
-  const finalBidValue = (totalPolVal / totalRoughCts - labourPerRoughCt) * (1 - profitMarginPct / 100) * totalRoughCts;
+
+  // Calculate rough cost per ct (polish value per rough ct)
+  const roughCostPerCt = totalPolVal / totalRoughCts;
+
+  // Apply profit margin to rough cost, then subtract labour
+  const profitAdjustedCost = roughCostPerCt * (1 - profitMarginPct / 100);
+  const finalBidValue = (profitAdjustedCost - labourPerRoughCt) * totalRoughCts;
 
   // --- PROFILE TABLES ---
   const colorProfile = {};

@@ -85,7 +85,12 @@ const getMMByWeight = (weight, chart) => {
 const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
   const perCtPol = parcelData.total_cts > 0 ? (totals.totalValue / parcelData.total_cts) : 0;
   const yieldFactor = (state.yield || 30) / 100;
-  const finalBidValue = (perCtPol - (state.labour || 0)) * yieldFactor;
+  const profitMargin = parseFloat(state.profit_margin) || 0;
+  const labourPerCt = parseFloat(state.labour) || 0;
+
+  // Apply profit margin to polish value per ct, then subtract labour
+  const profitAdjustedPol = perCtPol * (1 - profitMargin / 100);
+  const finalBidValue = (profitAdjustedPol - labourPerCt) * yieldFactor;
 
   return (
     <div className="card glass verdict-card">
