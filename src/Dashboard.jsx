@@ -89,6 +89,10 @@ const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
   // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct) [Ultra Simple - No multipliers]
   const finalBidValue = perCtPol - labourPerCt;
 
+  // Profit margin calculation
+  const profitPct = parseFloat(state.profit_margin) || 0;
+  const finalProfitBid = finalBidValue - (finalBidValue * profitPct / 100);
+
   return (
     <div className="card glass verdict-card">
        <div className="card-hdr" style={{background:'#1e3a8a', color:'#fff'}}>FINAL PURCHASE VERDICT</div>
@@ -107,20 +111,24 @@ const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
                    />
                 </td>
              </tr>
-             <tr>
-                <td>Avg Yield %</td>
-                <td>
-                   <NumericInput 
-                      value={state.yield || 0} 
-                      onChange={v => onUpdate('yield', v)} 
-                      style={{width: '100%', textAlign: 'right', background: 'transparent', border: 'none', color: '#fff'}}
-                   />
-                </td>
-             </tr>
-             <tr className="verdict-row">
-                <td style={{fontWeight:800}}>FINAL BID VALUE</td>
-                <td className="text-green" style={{fontSize:18}}>$ {formatNum(finalBidValue, 2)}</td>
-             </tr>
+              <tr className="verdict-row">
+                 <td style={{fontWeight:800}}>FINAL BID VALUE</td>
+                 <td className="text-green" style={{fontSize:18}}>$ {formatNum(finalBidValue, 2)}</td>
+              </tr>
+              <tr>
+                 <td>Profit %</td>
+                 <td>
+                    <NumericInput
+                       value={state.profit_margin || 0}
+                       onChange={v => onUpdate('profit_margin', v)}
+                       style={{width: '100%', textAlign: 'right', background: 'transparent', border: 'none', color: 'var(--gold)', fontWeight: 700}}
+                    />
+                 </td>
+              </tr>
+              <tr className="verdict-row">
+                 <td style={{fontWeight:800}}>FINAL PROFIT BID</td>
+                 <td className="text-green" style={{fontSize:18}}>$ {formatNum(finalProfitBid, 2)}</td>
+              </tr>
           </tbody>
        </table>
        {totals.hotCts > 0 && (
