@@ -320,9 +320,7 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
          <div className="bid-item"><span>Total Polish Value</span><b>${formatNum(totalPolVal, 2)}</b></div>
          <div className="bid-item"><span>Polish $ / Rough Ct</span><b>${totalRoughCts > 0 ? (totalPolVal / totalRoughCts).toFixed(2) : 0}</b></div>
          <div className="bid-item"><span>Labour / Rough Ct</span><b>${formatNum(labourPerRoughCt, 2)}</b></div>
-         <div className="bid-item"><span>Rough Cost / Rough Ct</span><b>${totalRoughCts > 0 ? (totalPolVal / totalRoughCts - labourPerRoughCt).toFixed(2) : 0}</b></div>
-         <div className="bid-item"><span>Profit Margin</span><b>{profitMarginPct}%</b></div>
-         <div className="bid-item"><span>Final Bid $ / Rough Ct</span><b>${totalRoughCts > 0 ? (finalBidValue / totalRoughCts).toFixed(2) : 0}</b></div>
+          <div className="bid-item"><span>Final Bid $ / Rough Ct</span><b>${totalRoughCts > 0 ? (finalBidValue / totalRoughCts).toFixed(2) : 0}</b></div>
          <div className="bid-item highlight"><span>Total Labour ({formatNum(totalRoughCts, 2)} cts)</span><b>${formatNum(totalLabour, 0)}</b></div>
          <div className="bid-item highlight"><span>Total Bid Value</span><b>${formatNum(finalBidValue, 0)}</b></div>
       </div>
