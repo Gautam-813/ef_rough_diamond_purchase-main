@@ -85,12 +85,10 @@ const getMMByWeight = (weight, chart) => {
 const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
   const perCtPol = parcelData.total_cts > 0 ? (totals.totalValue / parcelData.total_cts) : 0;
   const yieldFactor = (state.yield || 30) / 100;
-  const profitMargin = parseFloat(state.profit_margin) || 0;
   const labourPerCt = parseFloat(state.labour) || 0;
 
-  // Apply profit margin to polish value per ct, then subtract labour
-  const profitAdjustedPol = perCtPol * (1 - profitMargin / 100);
-  const finalBidValue = (profitAdjustedPol - labourPerCt) * yieldFactor;
+  // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
+  const finalBidValue = (perCtPol - labourPerCt) * yieldFactor;
 
   return (
     <div className="card glass verdict-card">
@@ -787,16 +785,21 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
   const sample = state.sampleConfig?.[range] || { pcs: 0, cts: 0 };
   const rangeScaleFactor = (targetCts > 0 && sample.cts > 0) ? (targetCts / sample.cts) : 1;
 
-  // AUTOMATED SIZE LOOKUP
+  // POLISH CTS = ASSORTMENT CTS × AVG YIELD
   let totalP = 0; let totalC = 0;
   COLOUR_LIST.forEach(colour => {
      selectedShapes.forEach(shape => {
         CLARITY_LIST.forEach(clarity => {
-           const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+           // Get CTS directly from assortment table (user input)
+           const assortmentCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
            const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
            const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+
+           // Pieces calculation (unchanged - for size lookup)
            totalP += Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
-           totalC += (roughC_sample * rangeScaleFactor * cMult) * (yieldPct / 100);
+
+           // CTS calculation: Assortment CTS × Avg Yield (simple as requested)
+           totalC += assortmentCts * (yieldPct / 100);
         });
      });
   });

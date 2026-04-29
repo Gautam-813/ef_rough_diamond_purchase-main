@@ -69,17 +69,15 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
   const avgYield = totalRoughCts > 0 ? (totalPolCts / totalRoughCts) * 100 : 0;
   const avgPricePerPolCt = totalPolCts > 0 ? totalPolVal / totalPolCts : 0;
   
-  // Bid Calculations
+  // Bid Calculations - Simple: Per Ct Pol $ - Labour ($/ct)
   const labourPerRoughCt = parseFloat(state.labour) || 0;
-  const profitMarginPct = parseFloat(state.profit_margin) || 0;
   const totalLabour = totalRoughCts * labourPerRoughCt;
 
-  // Calculate rough cost per ct (polish value per rough ct)
-  const roughCostPerCt = totalPolVal / totalRoughCts;
+  // Per Ct Pol $ = Total Polish Value ÷ Total Rough Cts
+  const perCtPol = totalPolVal / totalRoughCts;
 
-  // Apply profit margin to rough cost, then subtract labour
-  const profitAdjustedCost = roughCostPerCt * (1 - profitMarginPct / 100);
-  const finalBidValue = (profitAdjustedCost - labourPerRoughCt) * totalRoughCts;
+  // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
+  const finalBidValue = (perCtPol - labourPerRoughCt) * totalRoughCts;
 
   // --- PROFILE TABLES ---
   const colorProfile = {};
