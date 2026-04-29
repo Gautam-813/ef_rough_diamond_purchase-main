@@ -822,14 +822,14 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
              <span style={{fontSize:18, fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.2)'}}>Polish Calculation: {range}</span>
              
              <div className="header-params" style={{display:'flex', gap:20, alignItems:'center'}}>
-                <div className="param-item">
-                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Yield %</label>
-                   <input className="hdr-input" value={state.yield || ""} onChange={e => onGlobalUpdate('yield', e.target.value)} />
-                </div>
-                <div className="param-item">
-                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Stone Multiplier</label>
-                   <input className="hdr-input" value={rangeCfg.multiplier || ""} onChange={e => onUpdateConfig(range, 'multiplier', e.target.value)} />
-                </div>
+                 <div className="param-item">
+                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Yield %</label>
+                    <input className="hdr-input" value={state.yield || ""} onChange={e => onGlobalUpdate('yield', e.target.value)} style={{textAlign: 'center'}} />
+                 </div>
+                 <div className="param-item">
+                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Stone Multiplier</label>
+                    <input className="hdr-input" value={rangeCfg.multiplier || ""} onChange={e => onUpdateConfig(range, 'multiplier', e.target.value)} style={{textAlign: 'center'}} />
+                 </div>
                 <div className="param-item">
                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>POL MM</label>
                    <div className="auto-val" style={{color:'#fff', fontWeight:800}}>{polMM}</div>
