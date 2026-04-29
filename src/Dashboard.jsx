@@ -1092,22 +1092,18 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, onU
                 <td style={{fontSize:16}}>{formatNum(displayPolCts, 2)}</td>
                 <td colSpan={4}></td>
              </tr>
-             <tr style={{fontWeight:800}}>
-                <td>Yield</td>
-                 <td>
-                    <div style={{display:'flex', alignItems:'center', gap:5}}>
-                       <NumericInput 
-                          value={state.yield || ""} 
-                          onChange={v => onUpdateGlobal('yield', v)}
-                          style={{width:60, background:'rgba(255,255,255,0.05)', color:'var(--gold)', fontWeight:700, fontSize:16, textAlign:'center'}}
-                       />
-                       <span style={{fontSize:16, opacity:0.6}}>%</span>
-                    </div>
-                 </td>
-                <td colSpan={2}></td>
-                <td style={{border:'1px solid var(--gold)', color:'var(--gold)', fontSize:16}}>{formatNum(totalAvgSize, 3)}</td>
-                <td></td>
-             </tr>
+              <tr style={{fontWeight:800}}>
+                 <td>Yield</td>
+                  <td>
+                     <div style={{display:'flex', alignItems:'center', gap:5}}>
+                        <span style={{fontSize:16, color:'var(--gold)', fontWeight:700}}>
+                           {formatNum(totalRoughCts > 0 ? ((totalRoughCts - displayPolCts) / totalRoughCts) * 100 : 0, 1)}
+                        </span>
+                        <span style={{fontSize:16, opacity:0.6}}>%</span>
+                     </div>
+                  </td>
+                 <td colSpan={4}></td>
+              </tr>
           </tbody>
        </table>
     </div>
