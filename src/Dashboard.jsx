@@ -84,11 +84,10 @@ const getMMByWeight = (weight, chart) => {
 // Final Valuation Summary (The "Verdict" table from your image)
 const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
   const perCtPol = parcelData.total_cts > 0 ? (totals.totalValue / parcelData.total_cts) : 0;
-  const yieldFactor = (state.yield || 30) / 100;
   const labourPerCt = parseFloat(state.labour) || 0;
 
-  // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
-  const finalBidValue = (perCtPol - labourPerCt) * yieldFactor;
+  // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct) [Ultra Simple - No multipliers]
+  const finalBidValue = perCtPol - labourPerCt;
 
   return (
     <div className="card glass verdict-card">
