@@ -781,7 +781,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
 // Component for IMAGE 2: Polish Calculation
 const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, sizeChart }) => {
   const rangeCfg = state.rangeConfig?.[range] || { yield: 44, labour: 35, profit: 15, multiplier: 1, clarityMultipliers: {} };
-  const yieldPct = parseFloat(state.yield) || 44; // Use global yield
+  const yieldPct = parseFloat(rangeCfg.yield) || 44; // Use per-range yield
   const multiplier = parseFloat(rangeCfg.multiplier) || (state.strategy === 'Whole' ? 1 : 2);
   const selectedShapes = rangeCfg.selectedShapes || ["Round"];
   const clarityMultipliers = rangeCfg.clarityMultipliers || {};
@@ -822,10 +822,10 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
              <span style={{fontSize:18, fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.2)'}}>Polish Calculation: {range}</span>
              
              <div className="header-params" style={{display:'flex', gap:20, alignItems:'center'}}>
-                 <div className="param-item">
-                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Yield %</label>
-                    <input className="hdr-input" value={state.yield || ""} onChange={e => onGlobalUpdate('yield', e.target.value)} style={{textAlign: 'center'}} />
-                 </div>
+                  <div className="param-item">
+                     <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Yield %</label>
+                     <input className="hdr-input" value={rangeCfg.yield || ""} onChange={e => onUpdateConfig(range, 'yield', e.target.value)} style={{textAlign: 'center'}} />
+                  </div>
                  <div className="param-item">
                     <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Stone Multiplier</label>
                     <input className="hdr-input" value={rangeCfg.multiplier || ""} onChange={e => onUpdateConfig(range, 'multiplier', e.target.value)} style={{textAlign: 'center'}} />
@@ -1220,7 +1220,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
       
       const rCfg = state.rangeConfig?.[r] || {};
       const selectedShapes = rCfg.selectedShapes || ["Round"];
-      const rYield = parseFloat(state.yield) || 44; // Use GLOBAL yield
+      const rYield = parseFloat(rCfg.yield) || 44; // Use PER-RANGE yield
       const clarityMultipliers = rCfg.clarityMultipliers || {};
 
       let rSampleCts = 0;
