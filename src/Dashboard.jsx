@@ -1092,18 +1092,18 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, onU
                 <td style={{fontSize:16}}>{formatNum(displayPolCts, 2)}</td>
                 <td colSpan={4}></td>
              </tr>
-              <tr style={{fontWeight:800}}>
-                 <td>Yield</td>
-                  <td>
-                     <div style={{display:'flex', alignItems:'center', gap:5}}>
-                        <span style={{fontSize:16, color:'var(--gold)', fontWeight:700}}>
-                           {formatNum(totalRoughCts > 0 ? ((totalRoughCts - displayPolCts) / totalRoughCts) * 100 : 0, 1)}
-                        </span>
-                        <span style={{fontSize:16, opacity:0.6}}>%</span>
-                     </div>
-                  </td>
-                 <td colSpan={4}></td>
-              </tr>
+               <tr style={{fontWeight:800}}>
+                  <td>Yield</td>
+                   <td>
+                      <div style={{display:'flex', alignItems:'center', gap:5}}>
+                         <span style={{fontSize:16, color:'var(--gold)', fontWeight:700}}>
+                            {formatNum(totalRoughCts > 0 ? (displayPolCts / totalRoughCts) * 100 : 0, 1)}
+                         </span>
+                         <span style={{fontSize:16, opacity:0.6}}>%</span>
+                      </div>
+                   </td>
+                  <td colSpan={4}></td>
+               </tr>
           </tbody>
        </table>
     </div>
