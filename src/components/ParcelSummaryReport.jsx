@@ -543,7 +543,7 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           background: var(--card2);
         }
         .bid-item span { color: #cf8d8d; }
-        .bid-item b { font-weight: 800; }
+        .bid-item b { font-weight: 800; color: #cf8d8d; }
 
         @media print {
           .summary-report-container {

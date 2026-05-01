@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatNum } from '../utils/calculations';
 import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES } from '../constants/diamondData';
 
-const ParcelComparisonReport = ({ parcels, tender, prices }) => {
+const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
   const [selectedParcels, setSelectedParcels] = useState([]);
   const [showComparison, setShowComparison] = useState(false);
 
+  useEffect(() => {
+    if (parcels && parcels.length > 1) {
+      setShowComparison(true);
+    }
+  }, [parcels]);
+
   if (!parcels || parcels.length === 0) return <div className="p-20 text-center">No parcels available for comparison.</div>;
+
+  const handleBack = () => {
+    if (onBack) onBack();
+  };
 
   // Helper: Get Price Index (r1-r8) based on weight
   const getPriceIdxByWeight = (w) => {
@@ -95,7 +105,7 @@ const ParcelComparisonReport = ({ parcels, tender, prices }) => {
       polPcs,
       yield: roughCts > 0 ? (polCts / roughCts) * 100 : 0,
       polVal,
-      polPerRough,
+      polPerRough: roughCts > 0 ? polVal / roughCts : 0,
       usablePol,
       usableVal,
       nonUsablePol,
@@ -281,8 +291,8 @@ const ParcelComparisonReport = ({ parcels, tender, prices }) => {
           <p>{tender.name} | {comparisonData.length} Lots Compared</p>
         </div>
         <div className="report-actions">
-          <button className="btn btn-outline" onClick={() => setShowComparison(false)}>
-            ← Back to Selection
+          <button className="btn btn-outline" onClick={handleBack}>
+            ← Back to Parcels
           </button>
           <button className="btn btn-gold" onClick={handleDownloadPDF}>
             📄 Download PDF

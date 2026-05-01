@@ -155,6 +155,7 @@ export default function Dashboard() {
   const [globalPrices, setGlobalPrices] = useState(PRICE_LISTS); // Default fallback
   const [showTenderSummary, setShowTenderSummary] = useState(false);
   const [showParcelComparison, setShowParcelComparison] = useState(false);
+  const [selectedParcels, setSelectedParcels] = useState([]);
 
   // Apply theme
   useEffect(() => {
@@ -338,22 +339,25 @@ export default function Dashboard() {
           <div className="parcel-list">
              <div className="section-hdr">
                 <h2>{activeTender.name} <span style={{opacity:0.3, fontSize:14}}>(ID: {activeTender.id})</span></h2>
-                 <div style={{display:'flex', gap:10}}>
-                     <button className={`btn ${showTenderSummary ? 'btn-gold' : 'btn-outline'}`} onClick={() => {
-                       setShowTenderSummary(!showTenderSummary);
-                       if (!showTenderSummary) setShowParcelComparison(false); // Hide comparison when showing summary
-                     }}>
-                       {showTenderSummary ? '📊 Show List' : '📋 Notebook Summary'}
-                     </button>
-                     <button className={`btn ${showParcelComparison ? 'btn-blue' : 'btn-outline'}`} onClick={() => {
-                       setShowParcelComparison(!showParcelComparison);
-                       if (!showParcelComparison) setShowTenderSummary(false); // Hide summary when showing comparison
-                     }}>
-                       {showParcelComparison ? '📋 Show List' : '📊 Compare Parcels'}
-                     </button>
-                     <button className="btn btn-primary" onClick={handleCreateParcel}>+ New Parcel</button>
-                    <button className="btn btn-outline" onClick={() => setView('home')}>← Back</button>
-                 </div>
+                  <div style={{display:'flex', gap:10}}>
+                      <button className={`btn ${showTenderSummary ? 'btn-gold' : 'btn-outline'}`} onClick={() => {
+                        setShowTenderSummary(!showTenderSummary);
+                        if (!showTenderSummary) setShowParcelComparison(false); // Hide comparison when showing summary
+                      }}>
+                        {showTenderSummary ? '📊 Show List' : '📋 Notebook Summary'}
+                      </button>
+                      <button className={`btn ${showParcelComparison ? 'btn-blue' : 'btn-outline'}`} onClick={() => {
+                        setShowParcelComparison(!showParcelComparison);
+                        if (!showParcelComparison) setShowTenderSummary(false); // Hide summary when showing comparison
+                      }}>
+                        {showParcelComparison ? '📋 Show List' : '📊 Compare Parcels'}
+                      </button>
+                      {selectedParcels.length > 1 && (
+                        <button className="btn btn-green" onClick={() => setView('compare')}>🔍 Compare Selected ({selectedParcels.length})</button>
+                      )}
+                      <button className="btn btn-primary" onClick={handleCreateParcel}>+ New Parcel</button>
+                     <button className="btn btn-outline" onClick={() => setView('home')}>← Back</button>
+                  </div>
               </div>
                 {showTenderSummary ? (
                   <div className="tender-summary-view">
@@ -382,6 +386,7 @@ export default function Dashboard() {
                   <table className="ef-table">
                     <thead>
                         <tr>
+                          <th><input type="checkbox" onChange={e => { if(e.target.checked) setSelectedParcels(activeTender.parcels?.map(p=>p.id) || []) else setSelectedParcels([]) }} /> Select</th>
                           <th># No.</th>
                           <th>Parcel Name</th>
                           <th>Type</th>
@@ -394,6 +399,7 @@ export default function Dashboard() {
                     <tbody>
                         {activeTender.parcels?.map(p => (
                           <tr key={p.id}>
+                              <td><input type="checkbox" checked={selectedParcels.includes(p.id)} onChange={e => { if(e.target.checked) setSelectedParcels([...selectedParcels, p.id]) else setSelectedParcels(selectedParcels.filter(id=>id!==p.id)) }} /></td>
                               <td>{p.number}</td>
                               <td className="text-gold">{p.name}</td>
                               <td><span className="pill">{p.parcel_type}</span></td>
@@ -407,7 +413,7 @@ export default function Dashboard() {
                           </tr>
                         ))}
                         {(!activeTender.parcels || activeTender.parcels.length === 0) && (
-                          <tr><td colSpan="7" style={{textAlign:'center', padding:40, opacity:0.5}}>No parcels found in this notebook.</td></tr>
+                          <tr><td colSpan="8" style={{textAlign:'center', padding:40, opacity:0.5}}>No parcels found in this notebook.</td></tr>
                         )}
                     </tbody>
                   </table>
@@ -430,6 +436,14 @@ export default function Dashboard() {
               const updatedParcel = updatedTender.parcels.find(p => p.id === activeParcel.id);
               if (updatedParcel) setActiveParcel(updatedParcel);
             }}
+          />
+        )}
+        {view === 'compare' && activeTender && selectedParcels.length > 1 && (
+          <ParcelComparisonReport
+            parcels={activeTender.parcels.filter(p => selectedParcels.includes(p.id))}
+            tender={activeTender}
+            prices={globalPrices}
+            onBack={() => setView('parcels')}
           />
         )}
         {view === 'admin' && (
