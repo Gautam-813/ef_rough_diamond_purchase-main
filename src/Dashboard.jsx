@@ -780,71 +780,110 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
 
 // Component for IMAGE 2: Polish Calculation
 const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, sizeChart }) => {
-  const rangeCfg = state.rangeConfig?.[range] || { yield: 44, labour: 35, profit: 15, multiplier: 1, clarityMultipliers: {} };
-  const yieldPct = parseFloat(rangeCfg.yield) || 44; // Use per-range yield
-  const multiplier = parseFloat(rangeCfg.multiplier) || (state.strategy === 'Whole' ? 1 : 2);
+  const rangeCfg = state.rangeConfig?.[range] || { yield: 44, labour: 35, profit: 15, multiplier: 1, clarityMultipliers: {}, roundYield: 44, roundMultiplier: 1, fancyYield: 40, fancyMultiplier: 1.5 };
+  const roundYield = parseFloat(rangeCfg.roundYield) || 44;
+  const roundMultiplier = parseFloat(rangeCfg.roundMultiplier) || 1;
+  const fancyYield = parseFloat(rangeCfg.fancyYield) || 40;
+  const fancyMultiplier = parseFloat(rangeCfg.fancyMultiplier) || 1.5;
   const selectedShapes = rangeCfg.selectedShapes || ["Round"];
   const clarityMultipliers = rangeCfg.clarityMultipliers || {};
-  
+
   const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
   const targetCts = parseFloat(target.cts) || 0;
 
   const sample = state.sampleConfig?.[range] || { pcs: 0, cts: 0 };
   const rangeScaleFactor = (targetCts > 0 && sample.cts > 0) ? (targetCts / sample.cts) : 1;
 
-  // POLISH CTS = ASSORTMENT CTS × AVG YIELD
-  let totalP = 0; let totalC = 0;
+  // Calculate per-shape totals for avg sizes
+  let roundP = 0; let roundC = 0;
+  let fancyP = 0; let fancyC = 0;
   COLOUR_LIST.forEach(colour => {
      selectedShapes.forEach(shape => {
+        const isRound = shape === "Round";
+        const shapeMultiplier = isRound ? roundMultiplier : fancyMultiplier;
+        const shapeYield = isRound ? roundYield : fancyYield;
         CLARITY_LIST.forEach(clarity => {
-           // Get CTS directly from assortment table (user input)
            const assortmentCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
            const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
            const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
 
-           // Pieces calculation (unchanged - for size lookup)
-           totalP += Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
+           const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * shapeMultiplier);
+           const polC = assortmentCts * (shapeYield / 100);
 
-           // CTS calculation: Assortment CTS × Avg Yield (simple as requested)
-           totalC += assortmentCts * (yieldPct / 100);
+           if (isRound) {
+             roundP += polP;
+             roundC += polC;
+           } else {
+             fancyP += polP;
+             fancyC += polC;
+           }
         });
      });
   });
-  
-  const autoAvgSize = totalP > 0 ? (totalC / totalP) : 0;
-  const pIdx = getPriceIdxByWeight(autoAvgSize);
-  const polMM = getMMByWeight(autoAvgSize, sizeChart);
+
+  const roundAvgSize = roundP > 0 ? (roundC / roundP) : 0;
+  const fancyAvgSize = fancyP > 0 ? (fancyC / fancyP) : 0;
+  const pIdx = getPriceIdxByWeight(roundAvgSize); // Use round for price range
+  const polMM = getMMByWeight(roundAvgSize, sizeChart); // Shared Pol MM based on round
   
   return (
     <div className="card glass category-card" style={{marginBottom: 24}}>
-       <div className="card-hdr" style={{background:'#16a34a', color:'#fff', borderBottom:'2px solid #15803d', padding:'10px 15px'}}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%'}}>
-             <span style={{fontSize:18, fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.2)'}}>Polish Calculation: {range}</span>
-             
-             <div className="header-params" style={{display:'flex', gap:20, alignItems:'center'}}>
-                  <div className="param-item">
-                     <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Yield %</label>
-                     <input className="hdr-input" value={rangeCfg.yield || ""} onChange={e => onUpdateConfig(range, 'yield', e.target.value)} style={{textAlign: 'center'}} />
-                  </div>
+        <div className="card-hdr" style={{background:'#16a34a', color:'#fff', borderBottom:'2px solid #15803d', padding:'10px 15px'}}>
+           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%'}}>
+              <span style={{fontSize:18, fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.2)'}}>Polish Calculation: {range}</span>
+
+              <div className="header-params" style={{display:'flex', gap:20, alignItems:'center'}}>
                  <div className="param-item">
-                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Stone Multiplier</label>
-                    <input className="hdr-input" value={rangeCfg.multiplier || ""} onChange={e => onUpdateConfig(range, 'multiplier', e.target.value)} style={{textAlign: 'center'}} />
+                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>POL MM</label>
+                    <div className="auto-val" style={{color:'#fff', fontWeight:800}}>{polMM}</div>
                  </div>
-                <div className="param-item">
-                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>POL MM</label>
-                   <div className="auto-val" style={{color:'#fff', fontWeight:800}}>{polMM}</div>
-                </div>
-                <div className="param-item">
-                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Avg Pol Size</label>
-                   <div className="auto-val">{formatNum(autoAvgSize, 4)}</div>
-                </div>
-                <div className="param-item" style={{borderLeft:'1px solid rgba(255,255,255,0.2)', paddingLeft:15}}>
-                   <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Price Range</label>
-                   <b style={{fontSize:14, color:'var(--gold)'}}>{pIdx.toUpperCase()}</b>
-                </div>
-             </div>
-          </div>
-       </div>
+                 <div className="param-item" style={{borderLeft:'1px solid rgba(255,255,255,0.2)', paddingLeft:15}}>
+                    <label style={{fontSize:10, textTransform:'uppercase', opacity:0.8, display:'block'}}>Price Range</label>
+                    <b style={{fontSize:14, color:'var(--gold)'}}>{pIdx.toUpperCase()}</b>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <div className="shape-settings" style={{padding:'15px', background:'rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.1)'}}>
+           <h4 style={{margin:0, fontSize:14, fontWeight:700, color:'#fff', marginBottom:10}}>Shape-Specific Settings</h4>
+           <table className="shape-table" style={{width:'100%', borderCollapse:'collapse', fontSize:12}}>
+              <thead>
+                 <tr style={{background:'rgba(255,255,255,0.1)'}}>
+                    <th style={{padding:'8px', textAlign:'left', fontWeight:600, color:'#fff'}}>Shape</th>
+                    <th style={{padding:'8px', textAlign:'center', fontWeight:600, color:'#fff'}}>Yield %</th>
+                    <th style={{padding:'8px', textAlign:'center', fontWeight:600, color:'#fff'}}>Multiplier</th>
+                    <th style={{padding:'8px', textAlign:'center', fontWeight:600, color:'#fff'}}>Avg Pol Size</th>
+                 </tr>
+              </thead>
+              <tbody>
+                 <tr>
+                    <td style={{padding:'8px', fontWeight:600, color:'var(--gold)'}}>ROUND</td>
+                    <td style={{padding:'8px', textAlign:'center'}}>
+                       <input className="hdr-input" style={{width:60, textAlign:'center'}} value={rangeCfg.roundYield || ""} onChange={e => onUpdateConfig(range, 'roundYield', e.target.value)} />
+                    </td>
+                    <td style={{padding:'8px', textAlign:'center'}}>
+                       <input className="hdr-input" style={{width:60, textAlign:'center'}} value={rangeCfg.roundMultiplier || ""} onChange={e => onUpdateConfig(range, 'roundMultiplier', e.target.value)} />
+                    </td>
+                    <td style={{padding:'8px', textAlign:'center', fontWeight:600, color:'var(--gold)'}}>
+                       {formatNum(roundAvgSize, 4)}
+                    </td>
+                 </tr>
+                 <tr>
+                    <td style={{padding:'8px', fontWeight:600, color:'var(--gold)'}}>FANCY</td>
+                    <td style={{padding:'8px', textAlign:'center'}}>
+                       <input className="hdr-input" style={{width:60, textAlign:'center'}} value={rangeCfg.fancyYield || ""} onChange={e => onUpdateConfig(range, 'fancyYield', e.target.value)} />
+                    </td>
+                    <td style={{padding:'8px', textAlign:'center'}}>
+                       <input className="hdr-input" style={{width:60, textAlign:'center'}} value={rangeCfg.fancyMultiplier || ""} onChange={e => onUpdateConfig(range, 'fancyMultiplier', e.target.value)} />
+                    </td>
+                    <td style={{padding:'8px', textAlign:'center', fontWeight:600, color:'var(--gold)'}}>
+                       {formatNum(fancyAvgSize, 4)}
+                    </td>
+                 </tr>
+              </tbody>
+           </table>
+        </div>
        <div className="overflow-x">
           <table className="ef-table-excel">
              <thead>
@@ -868,29 +907,32 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                             <tr key={`${colour}-${shape}`}>
                                {sIdx === 0 && <td rowSpan={selectedShapes.length} className="rng-cell" style={{verticalAlign:'middle'}}>{colour}</td>}
                                <td style={{fontSize:11, fontWeight:600, opacity:0.8}}>{shape}</td>
-                               {CLARITY_LIST.map(clarity => {
-                                  const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
-                                  const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-                                  const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
-                                  
-                                  const roughC = roughC_sample * rangeScaleFactor * cMult;
-                                  const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
-                                  const polC = parseFloat(formatNum(roughC * (yieldPct / 100), 2).replace(/,/g, ''));
-                                  
-                                  const priceShape = shape === "Round" ? "Round" : "Fancy";
-                                  const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
-                                  
-                                  const totalVal = polC * price;
-                                  rowP += polP; rowC += polC; rowV += totalVal;
-                                  return (
-                                     <React.Fragment key={clarity}>
-                                        <td>{polP || ""}</td>
-                                        <td>{formatNum(polC, 2)}</td>
-                                        <td>{formatNum(price, 2)}</td>
-                                        <td className="text-gold">{formatNum(totalVal, 2)}</td>
-                                     </React.Fragment>
-                                  );
-                               })}
+                                {CLARITY_LIST.map(clarity => {
+                                   const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
+                                   const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+                                   const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+
+                                   const roughC = roughC_sample * rangeScaleFactor * cMult;
+                                   const isRound = shape === "Round";
+                                   const shapeYield = isRound ? roundYield : fancyYield;
+                                   const shapeMultiplier = isRound ? roundMultiplier : fancyMultiplier;
+                                   const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * shapeMultiplier);
+                                   const polC = parseFloat(formatNum(roughC * (shapeYield / 100), 2).replace(/,/g, ''));
+
+                                   const priceShape = shape === "Round" ? "Round" : "Fancy";
+                                   const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
+
+                                   const totalVal = polC * price;
+                                   rowP += polP; rowC += polC; rowV += totalVal;
+                                   return (
+                                      <React.Fragment key={clarity}>
+                                         <td>{polP || ""}</td>
+                                         <td>{formatNum(polC, 2)}</td>
+                                         <td>{formatNum(price, 2)}</td>
+                                         <td className="text-gold">{formatNum(totalVal, 2)}</td>
+                                      </React.Fragment>
+                                   );
+                                })}
                                <td className="row-total">{rowP}</td>
                                <td className="row-total">{formatNum(rowC, 2)}</td>
                                 <td className="row-total text-green">$ {formatNum(rowV, 2)}</td>
@@ -904,28 +946,31 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                      const clarityTotals = {};
                      CLARITY_LIST.forEach(cl => clarityTotals[cl] = { p: 0, c: 0, v: 0 });
 
-                     COLOUR_LIST.forEach(colour => {
-                        selectedShapes.forEach(shape => {
-                           CLARITY_LIST.forEach(clarity => {
-                              const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
-                              const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-                              const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                      COLOUR_LIST.forEach(colour => {
+                         selectedShapes.forEach(shape => {
+                            CLARITY_LIST.forEach(clarity => {
+                               const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
+                               const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+                               const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
 
-                              const roughC = roughC_sample * rangeScaleFactor * cMult;
-                              const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * multiplier);
-                              const polC = parseFloat(formatNum(roughC * (yieldPct / 100), 2).replace(/,/g, ''));
-                              
-                              const priceShape = shape === "Round" ? "Round" : "Fancy";
-                              const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
-                              const v = polC * price;
-                              
-                              clarityTotals[clarity].p += polP;
-                              clarityTotals[clarity].c += polC;
-                              clarityTotals[clarity].v += v;
-                              gP += polP; gC += polC; gV += v;
-                           });
-                        });
-                     });
+                               const roughC = roughC_sample * rangeScaleFactor * cMult;
+                               const isRound = shape === "Round";
+                               const shapeYield = isRound ? roundYield : fancyYield;
+                               const shapeMultiplier = isRound ? roundMultiplier : fancyMultiplier;
+                               const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * shapeMultiplier);
+                               const polC = parseFloat(formatNum(roughC * (shapeYield / 100), 2).replace(/,/g, ''));
+
+                               const priceShape = shape === "Round" ? "Round" : "Fancy";
+                               const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
+                               const v = polC * price;
+
+                               clarityTotals[clarity].p += polP;
+                               clarityTotals[clarity].c += polC;
+                               clarityTotals[clarity].v += v;
+                               gP += polP; gC += polC; gV += v;
+                            });
+                         });
+                      });
 
                      return (
                         <tr style={{fontWeight:800, background:'rgba(22,101,52,0.2)'}}>
