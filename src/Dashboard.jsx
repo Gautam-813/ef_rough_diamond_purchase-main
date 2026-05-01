@@ -16,6 +16,7 @@ import AdminPanel from './AdminPanel';
 import ParcelSummaryReport from './components/ParcelSummaryReport';
 import TenderSummaryReport from './components/TenderSummaryReport';
 import ParcelComparisonReport from './components/ParcelComparisonReport';
+import TenderComparisonReport from './components/TenderComparisonReport';
 
 // Helper: Get Price Index (r1-r8) based on weight
 const getPriceIdxByWeight = (w) => {
@@ -156,6 +157,15 @@ export default function Dashboard() {
   const [showTenderSummary, setShowTenderSummary] = useState(false);
   const [showParcelComparison, setShowParcelComparison] = useState(false);
   const [selectedParcels, setSelectedParcels] = useState([]);
+  const [selectedTenders, setSelectedTenders] = useState([]);
+
+  const handleTenderSelect = (t, checked) => {
+    if (checked) {
+      setSelectedTenders([...selectedTenders, t.id]);
+    } else {
+      setSelectedTenders(selectedTenders.filter(id => id !== t.id));
+    }
+  };
 
   // Apply theme
   useEffect(() => {
@@ -312,18 +322,35 @@ export default function Dashboard() {
           <div className="home-hero">
             <div className="section-hdr">
               <h2 className="title-glow">Your Purchase Notebooks</h2>
-              <button className="btn btn-primary" onClick={handleCreateTender}>+ New Notebook</button>
+              <div style={{display:'flex', gap:10}}>
+                {selectedTenders.length > 1 && (
+                  <button className="btn btn-green" onClick={() => setView('tenderCompare')}>🔍 Compare Selected Tenders ({selectedTenders.length})</button>
+                )}
+                <button className="btn btn-primary" onClick={handleCreateTender}>+ New Notebook</button>
+              </div>
             </div>
             <div className="grid">
               {tenders.map(t => (
-                <div key={t.id} className="home-card glass" onClick={() => selectTender(t)}>
-                  <div style={{display:'flex', justifyContent:'space-between'}}>
-                     <div className="badge badge-blue">TENDER</div>
+                <div key={t.id} className="home-card glass">
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                     <div style={{display:'flex', alignItems:'center', gap:10}}>
+                       <input type="checkbox" checked={selectedTenders.includes(t.id)} onChange={e => handleTenderSelect(t, e.target.checked)} />
+                       <div className="badge badge-blue">TENDER</div>
+                     </div>
                      <div style={{display:'flex', gap:5}}>
                         <button className="share-btn" title="Share with team" onClick={(e) => handleShare(e, t)}>🤝</button>
                         <button className="share-btn" style={{color:'#f87171'}} title="Delete Notebook" onClick={(e) => handleDeleteTender(e, t.id)}>🗑</button>
                      </div>
                   </div>
+                  <div onClick={() => selectTender(t)} style={{cursor:'pointer'}}>
+                    <h3 style={{marginTop: 10}}>{t.name}</h3>
+                    <div className="card-footer">
+                      <span>{t.parcels?.length || 0} Parcels</span>
+                      <span>{t.date}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
                   <h3 style={{marginTop: 10}}>{t.name}</h3>
                   <div className="card-footer">
                     <span>{t.parcels?.length || 0} Parcels</span>
@@ -444,6 +471,12 @@ export default function Dashboard() {
             tender={activeTender}
             prices={globalPrices}
             onBack={() => setView('parcels')}
+          />
+        )}
+        {view === 'tenderCompare' && selectedTenders.length > 1 && (
+          <TenderComparisonReport
+            tenders={tenders.filter(t => selectedTenders.includes(t.id))}
+            onBack={() => setView('home')}
           />
         )}
         {view === 'admin' && (
