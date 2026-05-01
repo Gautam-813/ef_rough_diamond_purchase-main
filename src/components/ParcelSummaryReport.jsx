@@ -51,16 +51,15 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
   };
 
   // --- AGGREGATED TOTALS ---
-  let totalRoughCts = 0;
+  const ranges = state.ranges || [];
+  // Use parcel total for rough cts display consistency
+  const totalRoughCts = parcel.total_cts;
   let totalPolPcs = 0;
   let totalPolCts = 0;
   let totalPolVal = 0;
 
-  const ranges = state.ranges || [];
   ranges.forEach(r => {
     const rData = getPolishedDataByRange(r);
-    const target = state.sizeProfile?.[r] || { cts: 0 };
-    totalRoughCts += target.cts;
     totalPolPcs += rData.pcs;
     totalPolCts += rData.cts;
     totalPolVal += rData.val;
@@ -109,28 +108,42 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
   let usableRough = 0; let usablePol = 0; let usableVal = 0;
   let nonUsableRough = 0; let nonUsablePol = 0; let nonUsableVal = 0;
 
+  // Detailed pcs breakdown
+  let usablePcs = { DEF: { VVS: 0, VS1: 0 }, G: { VVS: 0, VS1: 0 }, H: { VVS: 0, VS1: 0 } };
+  let nonUsablePcs = { I: { VS2: 0, SI1: 0, SI2: 0, I1: 0, I2: 0 }, J: { VS2: 0, SI1: 0, SI2: 0, I1: 0, I2: 0 }, K: { VS2: 0, SI1: 0, SI2: 0, I1: 0, I2: 0 } };
+
   ranges.forEach(r => {
     const target = state.sizeProfile?.[r] || { cts: 0 };
     const sampleRoughCts = getRoughCtsByRange(r);
     const scaleFactor = (target.cts > 0 && sampleRoughCts > 0) ? (target.cts / sampleRoughCts) : 1;
-    const rangeCfg = state.rangeConfig?.[r] || { yield: 44 };
+    const rangeCfg = state.rangeConfig?.[r] || { yield: 44, roundMultiplier: 1, fancyMultiplier: 1.5 };
     const yieldPct = parseFloat(rangeCfg.yield) || 44;
+    const roundMultiplier = parseFloat(rangeCfg.roundMultiplier) || 1;
+    const fancyMultiplier = parseFloat(rangeCfg.fancyMultiplier) || 1.5;
 
     COLOUR_LIST.forEach(col => {
       Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
+        const isRound = shape === "Round";
+        const shapeMultiplier = isRound ? roundMultiplier : fancyMultiplier;
         CLARITY_LIST.forEach(clr => {
+          const sP = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
           const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
+          const cMult = parseFloat(rangeCfg.clarityMultipliers?.[clr]) || 1;
           const roughC = sC * scaleFactor;
+          const polP = Math.round((sP * scaleFactor * cMult) * shapeMultiplier);
           const polC = roughC * (yieldPct / 100);
           const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
           const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
           const val = polC * price;
 
           const isUsable = ["DEF", "G", "H"].includes(col) && ["VVS", "VS1"].includes(clr);
+          const isNonUsable = ["I", "J", "K"].includes(col) && ["VS2", "SI1", "SI2", "I1", "I2"].includes(clr);
           if (isUsable) {
             usableRough += roughC; usablePol += polC; usableVal += val;
-          } else {
+            usablePcs[col][clr] += polP;
+          } else if (isNonUsable) {
             nonUsableRough += roughC; nonUsablePol += polC; nonUsableVal += val;
+            nonUsablePcs[col][clr] += polP;
           }
         });
       });
@@ -314,6 +327,86 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
         </tbody>
       </table>
 
+      <div style={{display: 'flex', gap: 20, marginTop: 30}}>
+        {/* 4.5. USABLE DETAIL */}
+        <div style={{flex: 1}}>
+          <div className="section-title">USABLE DETAIL (PCS)</div>
+          <table className="summary-table mini" style={{maxWidth: 300}}>
+            <thead>
+              <tr><th>Color</th><th>VVS</th><th>VS1</th><th>Total</th><th>%</th></tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const totalUsable = Object.values(usablePcs).reduce((s, c) => s + (c.VVS || 0) + (c.VS1 || 0), 0);
+                return Object.keys(usablePcs).map(col => {
+                  const rowTotal = (usablePcs[col].VVS || 0) + (usablePcs[col].VS1 || 0);
+                  const pct = totalUsable > 0 ? ((rowTotal / totalUsable) * 100).toFixed(1) : 0;
+                  return (
+                    <tr key={col}>
+                      <td>{col}</td>
+                      <td>{usablePcs[col].VVS || 0}</td>
+                      <td>{usablePcs[col].VS1 || 0}</td>
+                      <td>{rowTotal}</td>
+                      <td>{pct}%</td>
+                    </tr>
+                  );
+                }).concat(
+                  <tr className="total-row" key="total">
+                    <td>TOTAL</td>
+                    <td>{Object.values(usablePcs).reduce((s, c) => s + (c.VVS || 0), 0)}</td>
+                    <td>{Object.values(usablePcs).reduce((s, c) => s + (c.VS1 || 0), 0)}</td>
+                    <td>{Object.values(usablePcs).reduce((s, c) => s + (c.VVS || 0) + (c.VS1 || 0), 0)}</td>
+                    <td>100.0%</td>
+                  </tr>
+                );
+              })()}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 4.6. NON-USABLE DETAIL */}
+        <div style={{flex: 1}}>
+          <div className="section-title">NON-USABLE DETAIL (PCS)</div>
+          <table className="summary-table mini" style={{maxWidth: 400}}>
+            <thead>
+              <tr><th>Color</th><th>VS2</th><th>SI1</th><th>SI2</th><th>I1</th><th>I2</th><th>Total</th><th>%</th></tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const totalNonUsable = Object.values(nonUsablePcs).reduce((s, c) => s + Object.values(c).reduce((t, v) => t + v, 0), 0);
+                return Object.keys(nonUsablePcs).map(col => {
+                  const rowTotal = Object.values(nonUsablePcs[col]).reduce((s, v) => s + v, 0);
+                  const pct = totalNonUsable > 0 ? ((rowTotal / totalNonUsable) * 100).toFixed(1) : 0;
+                  return (
+                    <tr key={col}>
+                      <td>{col}</td>
+                      <td>{nonUsablePcs[col].VS2 || 0}</td>
+                      <td>{nonUsablePcs[col].SI1 || 0}</td>
+                      <td>{nonUsablePcs[col].SI2 || 0}</td>
+                      <td>{nonUsablePcs[col].I1 || 0}</td>
+                      <td>{nonUsablePcs[col].I2 || 0}</td>
+                      <td>{rowTotal}</td>
+                      <td>{pct}%</td>
+                    </tr>
+                  );
+                }).concat(
+                  <tr className="total-row" key="total">
+                    <td>TOTAL</td>
+                    <td>{Object.values(nonUsablePcs).reduce((s, c) => s + (c.VS2 || 0), 0)}</td>
+                    <td>{Object.values(nonUsablePcs).reduce((s, c) => s + (c.SI1 || 0), 0)}</td>
+                    <td>{Object.values(nonUsablePcs).reduce((s, c) => s + (c.SI2 || 0), 0)}</td>
+                    <td>{Object.values(nonUsablePcs).reduce((s, c) => s + (c.I1 || 0), 0)}</td>
+                    <td>{Object.values(nonUsablePcs).reduce((s, c) => s + (c.I2 || 0), 0)}</td>
+                    <td>{Object.values(nonUsablePcs).reduce((s, c) => s + Object.values(c).reduce((t, v) => t + v, 0), 0)}</td>
+                    <td>100.0%</td>
+                  </tr>
+                );
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* 5. BID SUMMARY */}
       <div className="section-title" style={{marginTop:30}}>BID SUMMARY</div>
       <div className="bid-summary-grid">
@@ -338,8 +431,8 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
 
       <style jsx>{`
         .summary-report-container {
-          background: #fff;
-          color: #1e293b;
+          background: var(--bg);
+          color: #cf8d8d;
           padding: 40px;
           border-radius: 8px;
           font-family: 'Inter', sans-serif;
@@ -352,13 +445,13 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           grid-template-columns: 2fr repeat(7, 1fr);
           gap: 10px;
           margin-bottom: 30px;
-          border-bottom: 2px solid #f1f5f9;
+          border-bottom: 2px solid var(--border);
           padding-bottom: 20px;
         }
         .stat-card {
           text-align: center;
           padding: 10px;
-          background: #f8fafc;
+          background: var(--card2);
           border-radius: 4px;
         }
         .stat-card label {
@@ -374,16 +467,16 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           font-weight: 800;
         }
         .stat-card.highlighted {
-          background: #1e3a8a;
-          color: #fff;
+          background: var(--card);
+          color: var(--bg);
         }
         .section-title {
           font-size: 12px;
           font-weight: 800;
-          color: #64748b;
+          color: #cf8d8d;
           margin-bottom: 10px;
           padding-bottom: 5px;
-          border-bottom: 1px solid #e2e8f0;
+          border-bottom: 1px solid var(--border);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -394,8 +487,8 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           font-size: 13px;
         }
         .summary-table th {
-          background: #1e293b;
-          color: #fff;
+          background: var(--card);
+          color: #cf8d8d;
           text-align: left;
           padding: 10px;
           font-size: 11px;
@@ -403,25 +496,30 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
         }
         .summary-table td {
           padding: 10px;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid var(--border);
+          color: #cf8d8d;
         }
         .summary-table.mini {
           font-size: 12px;
         }
+        .summary-table.mini th,
+        .summary-table.mini td {
+          text-align: center;
+        }
         .total-row {
-          background: #f8fafc;
+          background: var(--card2);
           font-weight: 800;
         }
-        .text-gold { color: #b45309; }
-        .text-green { color: #15803d; }
+        .text-gold { color: var(--gold); }
+        .text-green { color: var(--green); }
         .grid-2-col {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 40px;
         }
         .info-banner {
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
+          background: var(--card2);
+          border: 1px solid var(--border);
           padding: 10px 15px;
           border-radius: 4px;
           font-size: 12px;
@@ -431,22 +529,22 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 0;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--border);
         }
         .bid-item {
           display: flex;
           justify-content: space-between;
           padding: 12px 20px;
-          border-bottom: 1px solid #f1f5f9;
-          border-right: 1px solid #f1f5f9;
+          border-bottom: 1px solid var(--border);
+          border-right: 1px solid var(--border);
           font-size: 14px;
         }
         .bid-item.highlight {
-          background: #f8fafc;
+          background: var(--card2);
         }
-        .bid-item span { color: #64748b; }
+        .bid-item span { color: #cf8d8d; }
         .bid-item b { font-weight: 800; }
-        
+
         @media print {
           .summary-report-container {
             box-shadow: none;

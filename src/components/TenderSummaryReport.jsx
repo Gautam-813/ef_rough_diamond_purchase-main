@@ -28,7 +28,9 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
 
   const parcelSummaries = parcels.map(p => {
     const state = p.calc_state;
-    if (!state || !state.table) return { name: p.name, number: p.number, rough: p.total_cts, pol: 0, val: 0, bid: 0 };
+    if (!state || !state.table) {
+      return { name: p.name, number: p.number, rough: p.total_cts, pol: 0, val: 0, bid: 0 };
+    }
 
     let pRough = 0;
     let pPol = 0;
@@ -39,34 +41,36 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
       const target = state.sizeProfile?.[r] || { cts: 0 };
       const rangeCfg = state.rangeConfig?.[r] || { yield: 44 };
       const yieldPct = parseFloat(rangeCfg.yield) || 44;
-      
+
       pRough += target.cts;
 
-      // Calculate sample rough cts to find scale factor
-      let sampleRough = 0;
-      COLOUR_LIST.forEach(col => {
-        Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
-          CLARITY_LIST.forEach(clr => {
-            sampleRough += parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
-          });
-        });
-      });
+        // Calculate sample rough cts to find scale factor
+        let sampleRough = 0;
+        for (const col of COLOUR_LIST) {
+          const colData = state.table && state.table[r] && state.table[r][col] ? state.table[r][col] : {};
+          for (const shape of Object.keys(colData)) {
+            for (const clr of CLARITY_LIST) {
+              sampleRough += parseFloat(colData[shape]?.[clr]?.cts) || 0;
+            }
+          }
+        }
 
       const scaleFactor = (target.cts > 0 && sampleRough > 0) ? (target.cts / sampleRough) : 1;
 
-      COLOUR_LIST.forEach(col => {
-        Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
-          CLARITY_LIST.forEach(clr => {
-            const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
-            const polC = (sC * scaleFactor) * (yieldPct / 100);
-            const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-            const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
-            
-            pPol += polC;
-            pVal += (polC * price);
-          });
-        });
-      });
+        for (const col of COLOUR_LIST) {
+          const colData = state.table && state.table[r] && state.table[r][col] ? state.table[r][col] : {};
+          for (const shape of Object.keys(colData)) {
+            for (const clr of CLARITY_LIST) {
+              const sC = parseFloat(colData[shape]?.[clr]?.cts) || 0;
+              const polC = (sC * scaleFactor) * (yieldPct / 100);
+              const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
+              const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
+
+              pPol += polC;
+              pVal += (polC * price);
+            }
+          }
+        }
     });
 
     const labour = parseFloat(state.labour) || 0;
@@ -86,13 +90,13 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
       id: p.id,
       name: p.name,
       number: p.number,
-      rough: pRough,
+      rough: p.total_cts,
       pol: pPol,
       yield: pRough > 0 ? (pPol / pRough) * 100 : 0,
       val: pVal,
       avgPolPrice: pPol > 0 ? pVal / pPol : 0,
       bid: bid
-    };
+};
   });
 
   return (
@@ -163,8 +167,8 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
 
       <style jsx>{`
         .tender-summary-container {
-          background: #fff;
-          color: #1e293b;
+          background: var(--bg);
+          color: #cf8d8d;
           padding: 50px;
           border-radius: 12px;
           font-family: 'Inter', sans-serif;
@@ -177,7 +181,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 40px;
-          border-bottom: 3px solid #1e3a8a;
+          border-bottom: 3px solid var(--card);
           padding-bottom: 20px;
         }
         .grand-stats {
@@ -199,13 +203,13 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
           font-weight: 900;
         }
         .grand-stat.highlight .val {
-          color: #15803d;
+          color: var(--green);
           font-size: 28px;
         }
         .section-title {
           font-size: 14px;
           font-weight: 900;
-          color: #64748b;
+          color: #cf8d8d;
           margin-bottom: 20px;
           letter-spacing: 1px;
         }
@@ -215,37 +219,40 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
           margin-bottom: 40px;
         }
         .tender-table th {
-          background: #f8fafc;
-          color: #475569;
+          background: var(--card2);
+          color: #cf8d8d;
           text-align: left;
           padding: 15px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 2px solid var(--border);
           font-size: 12px;
           text-transform: uppercase;
         }
         .tender-table td {
           padding: 15px;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid var(--border);
           font-size: 14px;
+          color: #cf8d8d;
         }
         .total-row {
-          background: #1e3a8a;
-          color: #fff;
+          background: var(--card);
+          color: #cf8d8d;
           font-weight: 900;
         }
         .total-row td {
           border: none;
         }
-        .text-gold { color: #b45309; }
-        .text-green { color: #15803d; }
+        .text-gold { color: var(--gold); }
+        .text-green { color: var(--green); }
         .tender-footer {
           text-align: center;
           font-size: 11px;
           opacity: 0.5;
-          border-top: 1px solid #f1f5f9;
+          border-top: 1px solid var(--border);
           padding-top: 20px;
+          color: #cf8d8d;
         }
       `}</style>
+
     </div>
   );
 };
