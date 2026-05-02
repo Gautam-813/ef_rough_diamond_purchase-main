@@ -351,13 +351,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-                  <h3 style={{marginTop: 10}}>{t.name}</h3>
-                  <div className="card-footer">
-                    <span>{t.parcels?.length || 0} Parcels</span>
-                    <span>{t.date}</span>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
@@ -413,7 +406,7 @@ export default function Dashboard() {
                   <table className="ef-table">
                     <thead>
                         <tr>
-                          <th><input type="checkbox" onChange={e => { if(e.target.checked) setSelectedParcels(activeTender.parcels?.map(p=>p.id) || []) else setSelectedParcels([]) }} /> Select</th>
+                          <th><input type="checkbox" onChange={e => { e.target.checked ? setSelectedParcels(activeTender.parcels?.map(p=>p.id) || []) : setSelectedParcels([]) }} /> Select</th>
                           <th># No.</th>
                           <th>Parcel Name</th>
                           <th>Type</th>
@@ -426,7 +419,7 @@ export default function Dashboard() {
                     <tbody>
                         {activeTender.parcels?.map(p => (
                           <tr key={p.id}>
-                              <td><input type="checkbox" checked={selectedParcels.includes(p.id)} onChange={e => { if(e.target.checked) setSelectedParcels([...selectedParcels, p.id]) else setSelectedParcels(selectedParcels.filter(id=>id!==p.id)) }} /></td>
+                              <td><input type="checkbox" checked={selectedParcels.includes(p.id)} onChange={e => { e.target.checked ? setSelectedParcels([...selectedParcels, p.id]) : setSelectedParcels(selectedParcels.filter(id=>id!==p.id)) }} /></td>
                               <td>{p.number}</td>
                               <td className="text-gold">{p.name}</td>
                               <td><span className="pill">{p.parcel_type}</span></td>
