@@ -226,7 +226,7 @@ async def sync_prices_from_excel(
             "VVS": 1, "VS1": 2, "VS2": 3, "SI1": 4, "SI2": 5, "I1": 6, "I2": 7
         }
         
-        # Mapping of weight labels to our r1-r14 IDs
+        # Mapping of weight labels to our r1-r8 IDs
         range_mapping = {
             "0.002-0.004": "r1",
             "0.005-0.008": "r2",
@@ -235,13 +235,13 @@ async def sync_prices_from_excel(
             "0.052-0.077": "r5",
             "0.078-0.115": "r6",
             "0.116-0.158": "r7",
-            "0.159": "r8", # Handle 0.159+ or just 0.159
+            "0.159": "r8",
             "0.21-0.25": "r9",
             "0.26-0.30": "r10",
             "0.31-0.35": "r11",
             "0.36-0.40": "r12",
             "0.41-0.45": "r13",
-            "0.46-0.50": "r14"
+            "0.45-0.50": "r14"
         }
 
         def extract_block(start_row, shape_col_offset):
@@ -479,20 +479,35 @@ async def upload_media(
     new_media = models.Media(
         filename=file.filename,
         file_type=f_type,
-        file_path=f"static/{filename}",
+        file_path=f"/static/{filename}",
         parcel_id=parcel_id
     )
     db.add(new_media)
     db.commit()
-    return {"status": "success", "file_url": f"/static/{filename}"}
+    db.refresh(new_media)
+    return {
+        "id": new_media.id,
+        "filename": new_media.filename,
+        "file_type": new_media.file_type,
+        "file_path": new_media.file_path
+    }
 
 @app.delete("/media/{media_id}")
 def delete_media(media_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return {
-        "status": "online",
-        "message": "EF Diamond ERP API is running",
-        "version": "1.0.0"
-    }
+    media = db.query(models.Media).join(models.Parcel).join(models.Tender).filter(
+        models.Media.id == media_id,
+        models.Tender.owner_id == current_user.id
+    ).first()
+    
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found or unauthorized")
+    
+    if os.path.exists(media.file_path.lstrip("/").replace("static/", "uploads/")):
+        os.remove(media.file_path.lstrip("/").replace("static/", "uploads/"))
+    
+    db.delete(media)
+    db.commit()
+    return {"status": "success", "message": "Media deleted successfully"}
 
 # --- SERVE FRONTEND (Single Server Mode) ---
 # This assumes you have run 'npm run build' in the root directory
@@ -507,8 +522,7 @@ if os.path.exists(frontend_path):
     # Catch-all route for React client-side routing
     @app.get("/{full_path:path}")
     async def serve_react_app(full_path: str):
-        # If the path looks like an API route, let it 404 naturally
-        if full_path.startswith("api/") or full_path.startswith("auth/") or full_path.startswith("static/"):
+        if full_path.startswith("api/") or full_path.startswith("auth/"):
             raise HTTPException(status_code=404)
         
         index_path = os.path.join(frontend_path, "index.html")
