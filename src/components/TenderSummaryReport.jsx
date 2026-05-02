@@ -29,7 +29,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
   const parcelSummaries = parcels.map(p => {
     const state = p.calc_state;
     if (!state || !state.table) {
-      return { name: p.name, number: p.number, rough: p.total_cts, pol: 0, val: 0, bid: 0 };
+      return { name: p.name, number: p.number, rough: p.total_cts, pol: 0, val: 0, bid: 0, yield: 0, avgPolPrice: 0 };
     }
 
     let pRough = 0;
@@ -64,7 +64,8 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
               const sC = parseFloat(colData[shape]?.[clr]?.cts) || 0;
               const polC = (sC * scaleFactor) * (yieldPct / 100);
               const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-              const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
+              const priceShape = shape === "Round" ? "Round" : "Fancy";
+              const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
 
               pPol += polC;
               pVal += (polC * price);
@@ -168,7 +169,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
       <style jsx>{`
         .tender-summary-container {
           background: var(--bg);
-          color: #cf8d8d;
+          color: var(--text);
           padding: 50px;
           border-radius: 12px;
           font-family: 'Inter', sans-serif;
@@ -209,7 +210,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
         .section-title {
           font-size: 14px;
           font-weight: 900;
-          color: #cf8d8d;
+          color: var(--text);
           margin-bottom: 20px;
           letter-spacing: 1px;
         }
@@ -220,7 +221,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
         }
         .tender-table th {
           background: var(--card2);
-          color: #cf8d8d;
+          color: var(--text);
           text-align: left;
           padding: 15px;
           border-bottom: 2px solid var(--border);
@@ -231,11 +232,11 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
           padding: 15px;
           border-bottom: 1px solid var(--border);
           font-size: 14px;
-          color: #cf8d8d;
+          color: var(--text);
         }
         .total-row {
           background: var(--card);
-          color: #cf8d8d;
+          color: var(--text);
           font-weight: 900;
         }
         .total-row td {

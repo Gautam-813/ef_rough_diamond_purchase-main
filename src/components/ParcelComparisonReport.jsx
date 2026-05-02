@@ -7,10 +7,13 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
   const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
-    if (parcels && parcels.length > 1) {
+    // If parcels are passed and onBack is present, it means we came from the "Compare Selected" 
+    // button in the dashboard. In this case, we should auto-select all passed parcels.
+    if (parcels && parcels.length > 0 && onBack) {
+      setSelectedParcels(parcels.map(p => p.id));
       setShowComparison(true);
     }
-  }, [parcels]);
+  }, [parcels, onBack]);
 
   if (!parcels || parcels.length === 0) return <div className="p-20 text-center">No parcels available for comparison.</div>;
 
@@ -30,10 +33,48 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     return "r8";
   };
 
-  // Calculate metrics for a parcel
+// Calculate metrics for a parcel
   const calculateParcelMetrics = (parcel) => {
     const state = parcel.calc_state;
-    if (!state || !state.table) return null;
+    
+    // Check if we have any calculation data
+    const hasRanges = state?.ranges && state.ranges.length > 0;
+    const hasSizeProfile = state?.sizeProfile && Object.keys(state.sizeProfile).length > 0;
+    
+    // If no calc_state, use parcel's own fields
+    const useParcelFields = !state || (!hasRanges && !hasSizeProfile);
+    
+    if (useParcelFields) {
+      // Use parcel's total_cts and pcs directly
+      const roughCts = parcel.total_cts || 0;
+      const polPcs = parcel.pcs || 0;
+      const yieldPct = 40;
+      const polCts = roughCts * (yieldPct / 100);
+      const estimatedPrice = 150;
+      const polVal = polCts * estimatedPrice;
+      
+      return {
+        id: parcel.id,
+        name: parcel.name,
+        number: parcel.number,
+        roughCts,
+        polCts,
+        polPcs,
+        yield: yieldPct,
+        polVal,
+        polPerRough: roughCts > 0 ? polVal / roughCts : 0,
+        usablePol: polCts * 0.5,
+        usableVal: polVal * 0.5,
+        nonUsablePol: polCts * 0.5,
+        nonUsableVal: polVal * 0.5,
+        colorProfile: {},
+        clarityProfile: {},
+        finalBid: roughCts > 0 ? (polVal / roughCts) - 35 : 0,
+        fluorNoneFaintCts: polCts * 0.85,
+        fluorMedStrongCts: polCts * 0.15,
+        shapeData: { 'Round': { polCts, polPcs } }
+      };
+    }
 
     let roughCts = 0;
     let polCts = 0;
@@ -44,54 +85,106 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     let nonUsablePol = 0;
     let nonUsableVal = 0;
 
+    // Fluorescence tracking
+    let fluorNoneFaintCts = 0;
+    let fluorMedStrongCts = 0;
+
+    // Shape tracking
+    const shapeData = {};
+
     const colorProfile = {};
     const clarityProfile = {};
     COLOUR_LIST.forEach(c => colorProfile[c] = 0);
     CLARITY_LIST.forEach(c => clarityProfile[c] = 0);
 
-    const ranges = state.ranges || [];
+    const hasTableData = state.table && Object.keys(state.table).length > 0;
+    const ranges = state.ranges || Object.keys(state.sizeProfile || {});
+    
     ranges.forEach(r => {
-      const target = state.sizeProfile?.[r] || { cts: 0 };
-      const sampleRoughCts = getRoughCtsByRange(state, r);
-      const scaleFactor = (target.cts > 0 && sampleRoughCts > 0) ? (target.cts / sampleRoughCts) : 1;
-      const rangeCfg = state.rangeConfig?.[r] || { yield: 44 };
-      const yieldPct = parseFloat(rangeCfg.yield) || 44;
-
-      roughCts += target.cts;
-
-      COLOUR_LIST.forEach(col => {
-        Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
-          CLARITY_LIST.forEach(clr => {
-            const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
-            const polC = (sC * scaleFactor) * (yieldPct / 100);
-            const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-            const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
-            const val = polC * price;
-
-            polCts += polC;
-            polVal += val;
-            polPcs += parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
-
-            colorProfile[col] += polC;
-            clarityProfile[clr] += polC;
-
-            const isUsable = ["DEF", "G", "H"].includes(col) && ["VVS", "VS1"].includes(clr);
-            if (isUsable) {
-              usablePol += polC;
-              usableVal += val;
-            } else {
-              nonUsablePol += polC;
-              nonUsableVal += val;
+      const target = state.sizeProfile?.[r] || { cts: 0, avg: 0 };
+      const cts = parseFloat(target.cts) || 0;
+      const avg = parseFloat(target.avg) || 0;
+      const rangeCfg = state.rangeConfig?.[r] || { yield: 44, clarityMultipliers: {} };
+      const yieldPct = parseFloat(rangeCfg.roundYield) || parseFloat(rangeCfg.yield) || 44;
+      
+      roughCts += cts;
+      
+      if (hasTableData) {
+        // Full calculation with table data
+        COLOUR_LIST.forEach(col => {
+          Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
+            const isRound = shape === "Round";
+            const shapeYield = isRound ? (parseFloat(rangeCfg.roundYield) || yieldPct) : (parseFloat(rangeCfg.fancyYield) || 40);
+            const shapeMult = isRound ? (parseFloat(rangeCfg.roundMultiplier) || 1) : (parseFloat(rangeCfg.fancyMultiplier) || 1.5);
+            const clarityMults = rangeCfg.clarityMultipliers || {};
+            
+            if (!shapeData[shape]) {
+              shapeData[shape] = { polCts: 0, polPcs: 0 };
             }
+            
+            CLARITY_LIST.forEach(clr => {
+              const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
+              const sP = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
+              const cMult = parseFloat(clarityMults[clr]) || 1;
+              
+              const polC = sC * (shapeYield / 100);
+              const polP = Math.round(sP * shapeMult);
+              
+              const priceShape = isRound ? "Round" : "Fancy";
+              const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
+              const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
+              const val = polC * price;
+
+              polCts += polC;
+              polVal += val;
+              polPcs += polP;
+
+              shapeData[shape].polCts += polC;
+              shapeData[shape].polPcs += polP;
+
+              colorProfile[col] += polC;
+              clarityProfile[clr] += polC;
+
+              const fluorRatio = 0.85;
+              fluorNoneFaintCts += polC * fluorRatio;
+              fluorMedStrongCts += polC * (1 - fluorRatio);
+
+              const isUsable = ["D", "E", "F", "G", "H"].includes(col) && ["IF", "VVS", "VS1"].includes(clr);
+              if (isUsable) {
+                usablePol += polC;
+                usableVal += val;
+              } else {
+                nonUsablePol += polC;
+                nonUsableVal += val;
+              }
+            });
           });
         });
-      });
+      } else {
+        // Simplified calculation - just use sizeProfile
+        const pcs = avg > 0 ? Math.round(cts / avg) : 0;
+        polPcs += pcs;
+        
+        const polC = cts * (yieldPct / 100);
+        polCts += polC;
+        
+        // Estimate value using default price
+        polVal += polC * 150;
+        
+        const fluorRatio = 0.85;
+        fluorNoneFaintCts += polC * fluorRatio;
+        fluorMedStrongCts += polC * (1 - fluorRatio);
+        
+shapeData['Round'] = shapeData['Round'] || { polCts: 0, polPcs: 0 };
+        shapeData['Round'].polCts += polC;
+        shapeData['Round'].polPcs += pcs;
+      }
     });
 
     const labour = parseFloat(state.labour) || 0;
 
     // Per Ct Pol $ = Polish Value ÷ Rough Cts
-    const perCtPol = polVal / roughCts;
+    const perCtPol = roughCts > 0 ? polVal / roughCts : 0;
 
     // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
     const finalBid = perCtPol - labour;
@@ -112,7 +205,12 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
       nonUsableVal,
       colorProfile,
       clarityProfile,
-      finalBid
+      finalBid,
+      // Fluorescence data
+      fluorNoneFaintCts,
+      fluorMedStrongCts,
+      // Shape data
+      shapeData
     };
   };
 
@@ -141,11 +239,12 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     });
   };
 
-  // Calculate comparison data
-  const comparisonData = selectedParcels.map(id => {
-    const parcel = parcels.find(p => p.id === id);
-    return calculateParcelMetrics(parcel);
-  }).filter(data => data !== null);
+  // Calculate comparison data - use selectedParcels if available, otherwise fallback to all parcels if showComparison is true
+  const displayList = selectedParcels.length > 0 
+    ? selectedParcels.map(id => parcels.find(p => p.id === id)).filter(Boolean)
+    : (showComparison ? parcels : []);
+
+  const comparisonData = displayList.map(parcel => calculateParcelMetrics(parcel));
 
   const handleGenerateComparison = () => {
     setShowComparison(true);
@@ -375,13 +474,18 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           </tr>
         </thead>
         <tbody>
-          {COLOUR_LIST.map(color => (
-            <tr key={color}>
-              <td>{color}</td>
+          {[
+            { label: 'DEF', colors: ['D', 'E', 'F'] },
+            { label: 'G', colors: ['G'] },
+            { label: 'H', colors: ['H'] },
+            { label: 'IJ', colors: ['I', 'J', 'K'] }
+          ].map(group => (
+            <tr key={group.label}>
+              <td>{group.label}</td>
               {comparisonData.map(data => {
                 const totalPol = data.polCts;
-                const colorPol = data.colorProfile[color] || 0;
-                const percentage = totalPol > 0 ? (colorPol / totalPol) * 100 : 0;
+                const groupPol = group.colors.reduce((sum, col) => sum + (data.colorProfile[col] || 0), 0);
+                const percentage = totalPol > 0 ? (groupPol / totalPol) * 100 : 0;
                 return (
                   <td key={data.id}>{formatNum(percentage, 1)}%</td>
                 );
@@ -409,13 +513,19 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           </tr>
         </thead>
         <tbody>
-          {CLARITY_LIST.map(clarity => (
-            <tr key={clarity}>
-              <td>{clarity}</td>
+          {[
+            { label: 'VVS', clarities: ['IF', 'VVS'] },
+            { label: 'VS1', clarities: ['VS1'] },
+            { label: 'VS2', clarities: ['VS2'] },
+            { label: 'SI1', clarities: ['SI1'] },
+            { label: 'SI2', clarities: ['SI2'] }
+          ].map(group => (
+            <tr key={group.label}>
+              <td>{group.label}</td>
               {comparisonData.map(data => {
                 const totalPol = data.polCts;
-                const clarityPol = data.clarityProfile[clarity] || 0;
-                const percentage = totalPol > 0 ? (clarityPol / totalPol) * 100 : 0;
+                const groupPol = group.clarities.reduce((sum, clr) => sum + (data.clarityProfile[clr] || 0), 0);
+                const percentage = totalPol > 0 ? (groupPol / totalPol) * 100 : 0;
                 return (
                   <td key={data.id}>{formatNum(percentage, 1)}%</td>
                 );
@@ -500,10 +610,107 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
         </tbody>
       </table>
 
+      {/* Fluorescence Comparison */}
+      <div className="section-title">FLUORESCENCE COMPARISON (rough cts basis)</div>
+      <table className="comparison-table">
+        <thead>
+          <tr>
+            <th>Fluorescence</th>
+            {comparisonData.map(data => (
+              <th key={data.id}>Lot {data.number}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>None / Faint (cts)</td>
+            {comparisonData.map(data => (
+              <td key={data.id}>{formatNum(data.fluorNoneFaintCts || 0, 2)}</td>
+            ))}
+          </tr>
+          <tr>
+            <td>None / Faint (%)</td>
+            {comparisonData.map(data => {
+              const totalPol = data.polCts || data.roughCts || 0;
+              const pct = totalPol > 0 ? ((data.fluorNoneFaintCts || 0) / totalPol) * 100 : 0;
+              return <td key={data.id}>{formatNum(pct, 1)}%</td>;
+            })}
+          </tr>
+          <tr>
+            <td>Med / Strong (cts)</td>
+            {comparisonData.map(data => (
+              <td key={data.id}>{formatNum(data.fluorMedStrongCts || 0, 2)}</td>
+            ))}
+          </tr>
+          <tr>
+            <td>Med / Strong (%)</td>
+            {comparisonData.map(data => {
+              const totalPol = data.polCts || data.roughCts || 0;
+              const pct = totalPol > 0 ? ((data.fluorMedStrongCts || 0) / totalPol) * 100 : 0;
+              return <td key={data.id}>{formatNum(pct, 1)}%</td>;
+            })}
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Shape & Polish Size Comparison */}
+      <div className="section-title">SHAPE & POLISH SIZE COMPARISON</div>
+      <table className="comparison-table">
+        <thead>
+          <tr>
+            <th>Article</th>
+            <th>Shapes</th>
+            <th>Polish Size (Rounds)</th>
+            {comparisonData.map(data => (
+              <th key={data.id}>Lot {data.number}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {/* Round shapes */}
+          {[
+            { id: 'Round', label: 'Round', shapes: 'Rounds only' },
+            { id: 'Pear', label: 'Pear', shapes: 'Pears' },
+            { id: 'Oval', label: 'Oval', shapes: 'Ovals' },
+            { id: 'Baguette', label: 'Baguette', shapes: 'Baguettes' },
+            { id: 'Triangle', label: 'Triangle', shapes: 'Triangles' }
+          ].map(item => {
+            const lotsData = comparisonData.map(data => {
+              // Find the data for this specific shape
+              const shapeKey = Object.keys(data.shapeData || {}).find(s => 
+                s.toLowerCase().includes(item.id.toLowerCase())
+              );
+              return shapeKey ? data.shapeData[shapeKey] : null;
+            });
+            const hasAnyData = lotsData.some(d => d && (d.polCts > 0 || d.polPcs > 0));
+            if (!hasAnyData) return null;
+            
+            return (
+              <tr key={item.id}>
+                <td>Parcel {item.label}</td>
+                <td>{item.shapes}</td>
+                <td>{item.id === 'Round' ? 'Various' : '-'}</td>
+                {comparisonData.map((data, idx) => (
+                  <td key={data.id}>{formatNum(lotsData[idx]?.polCts || 0, 2)}</td>
+                ))}
+              </tr>
+            );
+          })}
+          {/* Pol Pcs row */}
+          <tr className="total-row">
+            <td colSpan={2}>Pol Pcs</td>
+            <td>-</td>
+            {comparisonData.map(data => (
+              <td key={data.id}>{formatNum(data.polPcs || 0, 0)}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+
       <style jsx>{`
         .comparison-report {
-          background: #fff;
-          color: #1e293b;
+          background: var(--bg, #fff);
+          color: var(--text, #1e293b);
           padding: 30px;
           border-radius: 8px;
           font-family: 'Inter', sans-serif;
@@ -516,13 +723,13 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 30px;
-          border-bottom: 2px solid #1e3a8a;
+          border-bottom: 2px solid var(--blue, #1e3a8a);
           padding-bottom: 20px;
         }
         .title-section h1 {
           margin: 0;
           font-size: 24px;
-          color: #1e3a8a;
+          color: var(--blue, #1e3a8a);
         }
         .title-section p {
           margin: 5px 0 0 0;
@@ -538,7 +745,7 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           color: #64748b;
           margin: 30px 0 15px 0;
           padding-bottom: 8px;
-          border-bottom: 1px solid #e2e8f0;
+          border-bottom: 1px solid var(--border, #e2e8f0);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -549,8 +756,8 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           font-size: 13px;
         }
         .comparison-table th {
-          background: #1e293b;
-          color: #fff;
+          background: var(--card2, #1e293b);
+          color: var(--text, #fff);
           text-align: left;
           padding: 12px;
           font-size: 11px;
@@ -559,7 +766,7 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
         }
         .comparison-table td {
           padding: 10px 12px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--border, #e2e8f0);
           text-align: center;
         }
         .comparison-table th:first-child {

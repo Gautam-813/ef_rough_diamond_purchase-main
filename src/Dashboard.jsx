@@ -96,7 +96,7 @@ const FinalValuationTable = ({ totals, parcelData, state, onUpdate }) => {
 
   return (
     <div className="card glass verdict-card">
-       <div className="card-hdr" style={{background:'#1e3a8a', color:'#fff'}}>FINAL PURCHASE VERDICT</div>
+       <div className="card-hdr" style={{background:'var(--blue)', color:'#fff'}}>FINAL PURCHASE VERDICT</div>
        <table className="profile-table">
           <tbody>
              <tr><td>Total POL $</td><td className="text-gold">$ {formatNum(totals.totalValue, 2)}</td></tr>
@@ -417,21 +417,31 @@ export default function Dashboard() {
                         </tr>
                     </thead>
                     <tbody>
-                        {activeTender.parcels?.map(p => (
-                          <tr key={p.id}>
-                              <td><input type="checkbox" checked={selectedParcels.includes(p.id)} onChange={e => { e.target.checked ? setSelectedParcels([...selectedParcels, p.id]) : setSelectedParcels(selectedParcels.filter(id=>id!==p.id)) }} /></td>
-                              <td>{p.number}</td>
-                              <td className="text-gold">{p.name}</td>
-                              <td><span className="pill">{p.parcel_type}</span></td>
-                              <td>{p.total_cts}</td>
-                              <td>{p.pcs}</td>
-                              <td>{new Date(p.created_at).toLocaleDateString()}</td>
-                              <td>
-                                <button className="btn-sm btn-primary" onClick={() => selectParcel(p)}>Open Calc</button>
+{activeTender.parcels?.map(p => {
+                            // Calculate total pcs from sizeProfile (total_cts / avg_size)
+                            const calcPcs = p.calc_state?.ranges?.reduce((sum, r) => {
+                              const profile = p.calc_state?.sizeProfile?.[r] || {};
+                              const cts = parseFloat(profile.cts) || 0;
+                              const avg = parseFloat(profile.avg) || 0;
+                              return sum + (avg > 0 ? Math.round(cts / avg) : 0);
+                            }, 0) || 0;
+                            const displayPcs = calcPcs > 0 ? calcPcs : (p.pcs || 0);
+                            return (
+                              <tr key={p.id}>
+                                <td><input type="checkbox" checked={selectedParcels.includes(p.id)} onChange={e => { e.target.checked ? setSelectedParcels([...selectedParcels, p.id]) : setSelectedParcels(selectedParcels.filter(id => id !== p.id)) }} /></td>
+                                <td>{p.number}</td>
+                                <td className="text-gold">{p.name}</td>
+                                <td><span className="pill">{p.parcel_type}</span></td>
+                                <td>{p.total_cts}</td>
+                                <td>{displayPcs}</td>
+                                <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                                <td>
+                                  <button className="btn-sm btn-primary" onClick={() => selectParcel(p)}>Open Calc</button>
                                   <button className="btn-sm btn-outline" style={{borderColor:'#f87171', color:'#f87171', marginLeft:5}} onClick={(e) => handleDeleteParcel(e, p.id)}>Delete</button>
-                              </td>
-                          </tr>
-                        ))}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         {(!activeTender.parcels || activeTender.parcels.length === 0) && (
                           <tr><td colSpan="8" style={{textAlign:'center', padding:40, opacity:0.5}}>No parcels found in this notebook.</td></tr>
                         )}
@@ -469,6 +479,7 @@ export default function Dashboard() {
         {view === 'tenderCompare' && selectedTenders.length > 1 && (
           <TenderComparisonReport
             tenders={tenders.filter(t => selectedTenders.includes(t.id))}
+            prices={globalPrices}
             onBack={() => setView('home')}
           />
         )}
@@ -619,9 +630,9 @@ const TenderProfileHeader = ({ tender, parcel, onParcelUpdate, onTenderUpdate })
        <table className="profile-table">
           <tbody>
              <tr><td>Viewing Date</td><td><input type="date" className="cell-input" style={{color:'#fbbf24', fontWeight:700}} value={tender.viewing_date || ''} onChange={e => onTenderUpdate('viewing_date', e.target.value)} /></td></tr>
-             <tr><td>Tender Name</td><td><input className="cell-input" style={{color:'#fff'}} value={tender.name || ''} onChange={e => onTenderUpdate('name', e.target.value)} /></td></tr>
-             <tr><td>Parcel Number</td><td><input className="cell-input" style={{color:'#fff'}} value={parcel.number || ''} onChange={e => onParcelUpdate('number', e.target.value)} /></td></tr>
-             <tr><td>Parcel Name</td><td><input className="cell-input" style={{color:'#fff'}} value={parcel.name || ''} onChange={e => onParcelUpdate('name', e.target.value)} /></td></tr>
+             <tr><td>Tender Name</td><td><input className="cell-input" style={{color:'var(--text)'}} value={tender.name || ''} onChange={e => onTenderUpdate('name', e.target.value)} /></td></tr>
+             <tr><td>Parcel Number</td><td><input className="cell-input" style={{color:'var(--text)'}} value={parcel.number || ''} onChange={e => onParcelUpdate('number', e.target.value)} /></td></tr>
+             <tr><td>Parcel Name</td><td><input className="cell-input" style={{color:'var(--text)'}} value={parcel.name || ''} onChange={e => onParcelUpdate('name', e.target.value)} /></td></tr>
              <tr><td>Total Cts</td><td><NumericInput value={parcel.total_cts} onChange={v => onParcelUpdate('total_cts', v)} /></td></tr>
              <tr><td>Pcs</td><td><NumericInput value={parcel.pcs} onChange={v => onParcelUpdate('pcs', v)} /></td></tr>
              <tr><td>Average Size</td><td>{avgSize}</td></tr>
@@ -660,7 +671,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
 
   return (
     <div className="card glass category-card" style={{marginBottom: 24}}>
-        <div className="card-hdr" style={{background:'#1e3a8a', color:'#fff', borderBottom:'2px solid #2563eb'}}>
+        <div className="card-hdr" style={{background:'var(--blue)', color:'var(--text)', borderBottom:'2px solid #2563eb'}}>
            <span style={{fontSize:16, fontWeight:800}}>Rough Assortment: {range}</span>
            <div style={{display:'flex', gap:20, fontSize:12, fontWeight:600}}>
                <span>Target: <b className="text-gold">{targetCts} cts</b> / <b>{targetPcs} pcs</b></span>
@@ -718,7 +729,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                           </div>
                        </th>
                     ))}
-                    <th colSpan="2" style={{background:'#1e3a8a', color:'#fff', minWidth:100}}>Sample Total</th>
+                    <th colSpan="2" style={{background:'var(--blue)', color:'var(--text)', minWidth:100}}>Sample Total</th>
                     <th colSpan="2" style={{background:'var(--card2)', color:'var(--gold)', minWidth:100}}>Whole Total</th>
                  </tr>
                  <tr>
@@ -726,8 +737,8 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                        <th title="Sample Pcs">S-P</th><th title="Sample Cts">S-C</th>
                        <th title="Whole Pcs" style={{color:'var(--gold)'}}>W-P</th><th title="Whole Cts" style={{color:'var(--gold)'}}>W-C</th>
                     </React.Fragment>)}
-                    <th style={{background:'#1e3a8a', color:'#fff'}}>PCS</th>
-                    <th style={{background:'#1e3a8a', color:'#fff'}}>CTS</th>
+                    <th style={{background:'var(--blue)', color:'var(--text)'}}>PCS</th>
+                    <th style={{background:'var(--blue)', color:'var(--text)'}}>CTS</th>
                     <th style={{background:'var(--card2)', color:'var(--gold)'}}>PCS</th>
                     <th style={{background:'var(--card2)', color:'var(--gold)'}}>CTS</th>
                  </tr>
@@ -804,8 +815,8 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                                  <td style={{color:'var(--gold)', background:'rgba(255,255,255,0.02)'}}>{formatNum(clarityTotals[clarity].wc, 2) || "0.00"}</td>
                               </React.Fragment>
                            ))}
-                           <td className="row-total" style={{background:'#1e3a8a', color:'#fff'}}>{gSP}</td>
-                           <td className="row-total" style={{background:'#1e3a8a', color:'#fff'}}>{formatNum(gSC, 2)}</td>
+                           <td className="row-total" style={{background:'var(--blue)', color:'var(--text)'}}>{gSP}</td>
+                           <td className="row-total" style={{background:'var(--blue)', color:'var(--text)'}}>{formatNum(gSC, 2)}</td>
                            <td className="row-total" style={{background:'var(--card2)', color:'var(--gold)'}}>{gWP}</td>
                            <td className="row-total" style={{background:'var(--card2)', color:'var(--gold)'}}>{formatNum(gWC, 2)}</td>
                         </tr>
@@ -868,7 +879,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
   
   return (
     <div className="card glass category-card" style={{marginBottom: 24}}>
-        <div className="card-hdr" style={{background:'#16a34a', color:'#fff', borderBottom:'2px solid #15803d', padding:'10px 15px'}}>
+        <div className="card-hdr" style={{background:'var(--green)', color:'var(--text)', borderBottom:'2px solid #15803d', padding:'10px 15px'}}>
            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%'}}>
               <span style={{fontSize:18, fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.2)'}}>Polish Calculation: {range}</span>
 
@@ -1023,9 +1034,9 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                  <td className="text-gold">{formatNum(clarityTotals[clarity].v, 2)}</td>
                               </React.Fragment>
                            ))}
-                           <td className="row-total" style={{background:'#166534', color:'#fff'}}>{gP}</td>
-                           <td className="row-total" style={{background:'#166534', color:'#fff'}}>{formatNum(gC, 2)}</td>
-                           <td className="row-total text-green" style={{background:'#166534', color:'#fff', fontSize:14}}>$ {formatNum(gV, 2)}</td>
+                           <td className="row-total" style={{background:'var(--green)', color:'var(--text)'}}>{gP}</td>
+                           <td className="row-total" style={{background:'var(--green)', color:'var(--text)'}}>{formatNum(gC, 2)}</td>
+                           <td className="row-total text-green" style={{background:'var(--green)', color:'var(--text)', fontSize:14}}>$ {formatNum(gV, 2)}</td>
                         </tr>
                      );
                   })()}
@@ -1057,7 +1068,7 @@ const SizeChartView = ({ chart, onUpdate }) => {
 
   return (
     <div className="card glass size-chart-view" style={{marginTop: 24}}>
-       <div className="section-hdr" style={{background:'#1e293b', color:'#fff', padding:'10px 15px', borderRadius:'8px 8px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+       <div className="section-hdr" style={{background:'var(--card2)', color:'var(--text)', padding:'10px 15px', borderRadius:'8px 8px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <div>
              <h2 className="title-glow" style={{margin:0}}>Master Size Chart (MM Lookup Table)</h2>
              <p style={{fontSize:11, opacity:0.6, margin:0}}>Automatic Polished MM lookups are based on this table.</p>
@@ -1114,7 +1125,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, onU
 
   return (
     <div className="card glass size-profile-card" style={{marginTop: 24}}>
-       <div className="card-hdr" style={{background:'#1e293b', color:'#fff', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+       <div className="card-hdr" style={{background:'var(--card2)', color:'var(--text)', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <span>Total CTs Size Profile</span>
           <button className="btn-sm btn-primary" onClick={() => {
              const name = prompt("Enter Sieve Range (e.g. -7+5):");
@@ -1139,7 +1150,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, onU
                    <td>
                       <input 
                         className="cell-input" 
-                        style={{color:'#fff', fontWeight:700, fontSize:14}}
+                        style={{color:'var(--text)', fontWeight:700, fontSize:14}}
                         value={profile[r.name]?.cts || ""} 
                         onChange={e => onUpdateRange(r.name, 'cts', e.target.value)} 
                         placeholder="0.0"
@@ -1149,7 +1160,7 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, onU
                    <td>
                       <input 
                         className="cell-input" 
-                        style={{color:'#fff', fontSize:14}}
+                        style={{color:'var(--text)', fontSize:14}}
                         value={profile[r.name]?.avg || ""} 
                         onChange={e => onUpdateRange(r.name, 'avg', e.target.value)} 
                         placeholder="0.0000"
@@ -1202,7 +1213,7 @@ const FluoProfileTable = ({ totalWeight, totalPcs, fluoState, onUpdate }) => {
   
   return (
     <div className="card glass fluo-profile-card" style={{marginTop: 24}}>
-       <div className="card-hdr" style={{background:'#0f172a', color:'#fff'}}>Fluorescence Profile</div>
+       <div className="card-hdr" style={{background:'var(--bg)', color:'var(--text)'}}>Fluorescence Profile</div>
        <table className="ef-table-excel">
           <thead>
              <tr>

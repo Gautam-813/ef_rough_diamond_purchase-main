@@ -39,7 +39,8 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           const polC = (sC * scaleFactor) * (yieldPct / 100);
           
           const priceIdx = SIEVE_RANGES[range]?.priceIdx || "s1";
-          const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
+          const priceShape = shape === "Round" ? "Round" : "Fancy";
+          const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
           
           pcs += polP;
           cts += polC;
@@ -133,10 +134,11 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
           const polP = Math.round((sP * scaleFactor * cMult) * shapeMultiplier);
           const polC = roughC * (yieldPct / 100);
           const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-          const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
+          const priceShape = shape === "Round" ? "Round" : "Fancy";
+          const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
           const val = polC * price;
 
-          const isUsable = ["DEF", "G", "H"].includes(col) && ["VVS", "VS1"].includes(clr);
+          const isUsable = ["D", "E", "F", "G", "H"].includes(col) && ["IF", "VVS", "VS1"].includes(clr);
           const isNonUsable = ["I", "J", "K"].includes(col) && ["VS2", "SI1", "SI2", "I1", "I2"].includes(clr);
           if (isUsable) {
             usableRough += roughC; usablePol += polC; usableVal += val;
@@ -432,7 +434,7 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
       <style jsx>{`
         .summary-report-container {
           background: var(--bg);
-          color: #cf8d8d;
+          color: var(--text);
           padding: 40px;
           border-radius: 8px;
           font-family: 'Inter', sans-serif;
@@ -473,7 +475,7 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
         .section-title {
           font-size: 12px;
           font-weight: 800;
-          color: #cf8d8d;
+          color: var(--text);
           margin-bottom: 10px;
           padding-bottom: 5px;
           border-bottom: 1px solid var(--border);
@@ -488,7 +490,7 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
         }
         .summary-table th {
           background: var(--card);
-          color: #cf8d8d;
+          color: var(--text);
           text-align: left;
           padding: 10px;
           font-size: 11px;
@@ -497,7 +499,7 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
         .summary-table td {
           padding: 10px;
           border-bottom: 1px solid var(--border);
-          color: #cf8d8d;
+          color: var(--text);
         }
         .summary-table.mini {
           font-size: 12px;
@@ -542,8 +544,8 @@ const ParcelSummaryReport = ({ parcel, tender, state, prices }) => {
         .bid-item.highlight {
           background: var(--card2);
         }
-        .bid-item span { color: #cf8d8d; }
-        .bid-item b { font-weight: 800; color: #cf8d8d; }
+        .bid-item span { color: var(--text); }
+        .bid-item b { font-weight: 800; color: var(--text); }
 
         @media print {
           .summary-report-container {

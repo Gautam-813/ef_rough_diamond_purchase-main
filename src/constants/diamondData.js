@@ -1,6 +1,6 @@
 
-export const COLOUR_LIST = ["DEF", "G", "H", "I", "J", "K", "L", "M", "CAPE"];
-export const CLARITY_LIST = ["VVS", "VS1", "VS2", "SI1", "SI2", "I1", "I2"];
+export const COLOUR_LIST = ["D", "E", "F", "G", "H", "I", "J", "K"];
+export const CLARITY_LIST = ["IF", "VVS", "VS1", "VS2", "SI1", "SI2", "I1"];
 
 export const SIEVE_RANGES = {
   // Mapping of physical sieves to Excel Price Ranges
@@ -42,7 +42,13 @@ export const PRICE_SIEVES = [
   { id: "r5", label: "0.052-0.077" },
   { id: "r6", label: "0.078-0.115" },
   { id: "r7", label: "0.116-0.158" },
-  { id: "r8", label: "0.159-0.200" }
+  { id: "r8", label: "0.159-0.200" },
+  { id: "r9", label: "0.21-0.25" },
+  { id: "r10", label: "0.26-0.30" },
+  { id: "r11", label: "0.31-0.35" },
+  { id: "r12", label: "0.36-0.40" },
+  { id: "r13", label: "0.41-0.45" },
+  { id: "r14", label: "0.46-0.50" }
 ];
 
 export const MASTER_SIZE_CHART = [

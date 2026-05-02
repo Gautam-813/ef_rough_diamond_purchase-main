@@ -226,7 +226,7 @@ async def sync_prices_from_excel(
             "VVS": 1, "VS1": 2, "VS2": 3, "SI1": 4, "SI2": 5, "I1": 6, "I2": 7
         }
         
-        # Mapping of weight labels to our r1-r8 IDs
+        # Mapping of weight labels to our r1-r14 IDs
         range_mapping = {
             "0.002-0.004": "r1",
             "0.005-0.008": "r2",
@@ -235,7 +235,13 @@ async def sync_prices_from_excel(
             "0.052-0.077": "r5",
             "0.078-0.115": "r6",
             "0.116-0.158": "r7",
-            "0.159": "r8" # Handle 0.159+ or just 0.159
+            "0.159": "r8", # Handle 0.159+ or just 0.159
+            "0.21-0.25": "r9",
+            "0.26-0.30": "r10",
+            "0.31-0.35": "r11",
+            "0.36-0.40": "r12",
+            "0.41-0.45": "r13",
+            "0.46-0.50": "r14"
         }
 
         def extract_block(start_row, shape_col_offset):
