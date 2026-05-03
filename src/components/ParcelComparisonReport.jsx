@@ -32,13 +32,15 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     if (w <= 0.077) return "r5";
     if (w <= 0.115) return "r6";
     if (w <= 0.158) return "r7";
-    if (w <= 0.20) return "r8";
-    if (w <= 0.25) return "r9";
-    if (w <= 0.30) return "r10";
-    if (w <= 0.35) return "r11";
-    if (w <= 0.40) return "r12";
-    if (w <= 0.45) return "r13";
-    return "r14";
+    if (w <= 0.18) return "r8";
+    if (w <= 0.22) return "r9";
+    if (w <= 0.29) return "r10";
+    if (w <= 0.39) return "r11";
+    if (w <= 0.49) return "r12";
+    if (w <= 0.69) return "r13";
+    if (w <= 0.89) return "r14";
+    if (w <= 0.99) return "r15";
+    return "r16";
   };
 
   const getMMByWeight = (weight, chart) => {

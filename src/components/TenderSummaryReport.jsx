@@ -22,6 +22,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
 
   // --- CALCULATION LOGIC (Aggregated) ---
   let grandTotalRough = 0;
+  let grandTotalRoughPcs = 0;
   let grandTotalPol = 0;
   let grandTotalVal = 0;
   let grandTotalBid = 0;
@@ -29,7 +30,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
   const parcelSummaries = parcels.map(p => {
     const state = p.calc_state;
     if (!state || !state.table) {
-      return { name: p.name, number: p.number, rough: p.total_cts, pol: 0, val: 0, bid: 0, yield: 0, avgPolPrice: 0 };
+      return { name: p.name, number: p.number, rough: p.total_cts, pol: 0, val: 0, bid: 0 };
     }
 
     let pRough = 0;
@@ -42,7 +43,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
       const rangeCfg = state.rangeConfig?.[r] || { yield: 44 };
       const yieldPct = parseFloat(rangeCfg.yield) || 44;
 
-      pRough += target.cts;
+      pRough += parseFloat(target.cts) || 0;
 
         // Calculate sample rough cts to find scale factor
         let sampleRough = 0;
@@ -64,8 +65,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
               const sC = parseFloat(colData[shape]?.[clr]?.cts) || 0;
               const polC = (sC * scaleFactor) * (yieldPct / 100);
               const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-              const priceShape = shape === "Round" ? "Round" : "Fancy";
-              const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
+              const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
 
               pPol += polC;
               pVal += (polC * price);
@@ -73,6 +73,11 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
           }
         }
     });
+    
+    // Fallback: If no rough cts entered in size profile, use the parcel total_cts
+    if (pRough <= 0 && p.total_cts > 0) {
+      pRough = p.total_cts;
+    }
 
     const labour = parseFloat(state.labour) || 0;
 
@@ -82,7 +87,17 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
     // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
     const bid = (perCtPol - labour) * pRough;
 
+    let pRoughPcs = 0;
+    ranges.forEach(r => {
+      const data = state.sizeProfile?.[r] || {};
+      const cts = parseFloat(data.cts) || 0;
+      const avg = parseFloat(data.avg) || 0;
+      pRoughPcs += avg > 0 ? Math.round(cts / avg) : 0;
+    });
+    if (pRoughPcs <= 0 && p.pcs > 0) pRoughPcs = p.pcs;
+
     grandTotalRough += pRough;
+    grandTotalRoughPcs += pRoughPcs;
     grandTotalPol += pPol;
     grandTotalVal += pVal;
     grandTotalBid += bid;
@@ -110,7 +125,7 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
         <div className="grand-stats">
           <div className="grand-stat">
             <label>Total Rough</label>
-            <div className="val">{formatNum(grandTotalRough, 2)} cts</div>
+            <div className="val">{formatNum(grandTotalRough, 2)} cts / {formatNum(grandTotalRoughPcs, 0)} pcs</div>
           </div>
           <div className="grand-stat">
             <label>Total Polish</label>
@@ -168,22 +183,36 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
 
       <style jsx>{`
         .tender-summary-container {
-          background: var(--bg);
+          background: var(--card);
           color: var(--text);
           padding: 50px;
-          border-radius: 12px;
-          font-family: 'Inter', sans-serif;
-          box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-          max-width: 1100px;
+          border-radius: 16px;
+          font-family: 'DM Sans', sans-serif;
+          box-shadow: var(--shadow);
+          max-width: 1200px;
           margin: 30px auto;
+          border: 1px solid var(--border);
         }
         .tender-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 40px;
-          border-bottom: 3px solid var(--card);
+          border-bottom: 3px solid var(--blue);
           padding-bottom: 20px;
+        }
+        .title-section h1 {
+          margin: 0;
+          font-size: 32px;
+          color: var(--blue);
+          font-weight: 800;
+        }
+        .title-section p {
+          margin: 5px 0 0 0;
+          opacity: 0.6;
+          font-weight: 700;
+          fontSize: 14px;
+          color: var(--text2);
         }
         .grand-stats {
           display: flex;
@@ -198,10 +227,12 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
           text-transform: uppercase;
           font-weight: 700;
           opacity: 0.6;
+          color: var(--text3);
         }
         .grand-stat .val {
           font-size: 20px;
           font-weight: 900;
+          color: var(--text);
         }
         .grand-stat.highlight .val {
           color: var(--green);
@@ -210,47 +241,58 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
         .section-title {
           font-size: 14px;
           font-weight: 900;
-          color: var(--text);
+          color: var(--text3);
           margin-bottom: 20px;
           letter-spacing: 1px;
+          text-transform: uppercase;
         }
         .tender-table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 40px;
+          background: var(--card);
         }
         .tender-table th {
-          background: var(--card2);
-          color: var(--text);
+          background: var(--bg2);
+          color: var(--text2);
           text-align: left;
           padding: 15px;
-          border-bottom: 2px solid var(--border);
+          border: 1px solid var(--border);
           font-size: 12px;
           text-transform: uppercase;
         }
         .tender-table td {
           padding: 15px;
-          border-bottom: 1px solid var(--border);
+          border: 1px solid var(--border);
           font-size: 14px;
           color: var(--text);
         }
         .total-row {
-          background: var(--card);
-          color: var(--text);
+          background: var(--bg2);
           font-weight: 900;
         }
-        .total-row td {
-          border: none;
-        }
-        .text-gold { color: var(--gold); }
-        .text-green { color: var(--green); }
+        .text-gold { color: var(--amber) !important; }
+        .text-green { color: var(--green) !important; }
         .tender-footer {
           text-align: center;
           font-size: 11px;
           opacity: 0.5;
           border-top: 1px solid var(--border);
           padding-top: 20px;
-          color: #cf8d8d;
+          color: var(--text3);
+        }
+
+        @media print {
+          .tender-summary-container {
+             background: #fff !important;
+             color: #000 !important;
+             padding: 0 !important;
+             box-shadow: none !important;
+             border: none !important;
+          }
+          .tender-table th { background: #f1f5f9 !important; color: #000 !important; }
+          .tender-table td { color: #000 !important; }
+          .title-section h1 { color: #1e3a8a !important; }
         }
       `}</style>
 

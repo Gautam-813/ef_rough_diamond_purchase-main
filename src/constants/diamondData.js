@@ -42,13 +42,15 @@ export const PRICE_SIEVES = [
   { id: "r5", label: "0.052-0.077" },
   { id: "r6", label: "0.078-0.115" },
   { id: "r7", label: "0.116-0.158" },
-  { id: "r8", label: "0.159-0.200" },
-  { id: "r9", label: "0.21-0.25" },
-  { id: "r10", label: "0.26-0.30" },
-  { id: "r11", label: "0.31-0.35" },
-  { id: "r12", label: "0.36-0.40" },
-  { id: "r13", label: "0.41-0.45" },
-  { id: "r14", label: "0.45-0.50" }
+  { id: "r8", label: "0.159-0.18" },
+  { id: "r9", label: "0.19-0.22" },
+  { id: "r10", label: "0.23-0.29" },
+  { id: "r11", label: "0.30-0.39" },
+  { id: "r12", label: "0.40-0.49" },
+  { id: "r13", label: "0.50-0.69" },
+  { id: "r14", label: "0.70-0.89" },
+  { id: "r15", label: "0.90-0.99" },
+  { id: "r16", label: "1.00-1.49" }
 ];
 
 export const MASTER_SIZE_CHART = [

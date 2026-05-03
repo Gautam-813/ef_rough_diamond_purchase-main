@@ -4,16 +4,19 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 # We use SQLite for local development, but this can be changed to PostgreSQL in .env
-# Production URL would look like: postgresql://user:password@localhost/dbname
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./diamond_erp.db")
 
-# check_same_thread=False is only required for SQLite
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
-)
+# Use NullPool only for PostgreSQL (Neon) to handle unstable connections
+# SQLite doesn't need it and it can cause issues there
+engine_args = {}
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    engine_args["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

@@ -172,10 +172,13 @@ export const api = {
     return res.json();
   },
   
-  syncPricesFromExcel: async () => {
+  syncPricesFromExcel: async (formData) => {
     const res = await fetch(`${API_URL}/config/sync-excel`, {
       method: "POST",
-      headers: getHeaders(),
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("ef_token")}`,
+      },
+      body: formData,
     });
     return res.json();
   }

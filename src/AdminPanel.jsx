@@ -145,7 +145,7 @@ export default function AdminPanel({ onBack }) {
       {error && <div className="error-banner">{error}</div>}
 
       <div className="card glass">
-        <div className="card-hdr" style={{background:'var(--bg2)', color:'var(--text)'}}>Registered Platform Users</div>
+        <div className="card-hdr" style={{background:'#1e1b4b', color:'#fff'}}>Registered Platform Users</div>
         <table className="ef-table">
           <thead>
             <tr>
