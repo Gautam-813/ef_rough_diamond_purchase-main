@@ -635,16 +635,16 @@ const TenderProfileHeader = ({ tender, parcel, onParcelUpdate, onTenderUpdate })
 
 // Component for IMAGE 1: Rough Assortment Input
 const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdateConfig, onClarityMultiplierChange }) => {
-const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
-  const targetCts = parseFloat(target.cts) || 0;
-  const targetPcs = target.avg > 0 ? Math.round(targetCts / target.avg) : 0;
-  const targetAvg = parseFloat(target.avg) || 0;
+   const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
+   const targetCts = parseFloat(target.cts) || 0;
+   const targetPcs = target.avg > 0 ? Math.round(targetCts / target.avg) : 0;
+   const targetAvg = parseFloat(target.avg) || 0;
 
-  const sample = state.sampleConfig?.[range] || { pcs: 0, cts: 0 };
-  const samplePcs = parseFloat(sample.pcs) || 0;
-  const sampleCts = parseFloat(sample.cts) || 0;
-  const sampleAvg = samplePcs > 0 ? sampleCts / samplePcs : 0;
-  const scaleFactor = (targetCts > 0 && sampleCts > 0) ? (targetCts / sampleCts) : 1;
+   const sample = state.sampleConfig?.[range] || { pcs: 0, cts: 0 };
+   const samplePcs = parseFloat(sample.pcs) || 0;
+   const sampleCts = parseFloat(sample.cts) || 0;
+   const sampleAvg = samplePcs > 0 ? sampleCts / samplePcs : 0;
+   const scaleFactor = (targetCts > 0 && sampleCts > 0) ? (targetCts / sampleCts) : 1;
 
    const rangeCfg = state.rangeConfig?.[range] || {};
    const selectedShapes = rangeCfg.selectedShapes || ["Round"];
@@ -662,10 +662,10 @@ const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
    };
 
    return (
-<div className="card glass category-card" style={{ marginBottom: 24 }}>
-          <div className="card-hdr" style={{ background: '#16a34a', color: '#fff', borderBottom: '2px solid #15803d' }}>
-            <span style={{ fontSize: 16, fontWeight: 800 }}>Rough Assortment: {range} <span style={{ marginLeft: 15 }}>|</span> Target: {targetCts} cts / {targetPcs} pcs <span style={{ marginLeft: 15 }}>|</span> Sample: <input className="cell-input" style={{ width: 50, borderBottom: '1px solid #fff', color: '#fff', background: 'transparent' }} value={sample.pcs || ""} onChange={e => onSampleChange(range, 'pcs', e.target.value)} placeholder="pcs" /> <span style={{ marginLeft: 15 }}>|</span> <input className="cell-input" style={{ width: 50, borderBottom: '1px solid #fff', color: '#fff', background: 'transparent' }} value={sample.cts || ""} onChange={e => onSampleChange(range, 'cts', e.target.value)} placeholder="cts" /> <span style={{ marginLeft: 15 }}>|</span> Sample Avg: {formatNum(sampleAvg, 2)} <span style={{ marginLeft: 15 }}>|</span> Target Avg: {formatNum(targetAvg, 2)}</span>
-          </div>
+      <div className="card glass category-card" style={{ marginBottom: 24 }}>
+         <div className="card-hdr" style={{ background: '#16a34a', color: '#fff', borderBottom: '2px solid #15803d' }}>
+            <span style={{ fontSize: 16, fontWeight: 800 }}>Rough Assortment: {range} <span style={{ marginLeft: 15 }}>|</span> Target: {targetCts} cts / {targetPcs} pcs <span style={{ marginLeft: 15 }}>|</span> Sample: <input className="cell-input" style={{ width: 50, borderBottom: '1px solid #fff', color: '#fff', background: 'transparent' }} value={sample.pcs || ""} onChange={e => onSampleChange(range, 'pcs', e.target.value)} placeholder="pcs" /> <span style={{ marginLeft: 15 }}>|</span> <input className="cell-input" style={{ width: 50, borderBottom: '1px solid #fff', color: '#fff', background: 'transparent' }} value={sample.cts || ""} onChange={e => onSampleChange(range, 'cts', e.target.value)} placeholder="cts" /> <span style={{ marginLeft: 15 }}>|</span> Sample Avg: {formatNum(sampleAvg, 3)} <span style={{ marginLeft: 15 }}>|</span> Target Avg: {formatNum(targetAvg, 3)}</span>
+         </div>
 
          <div className="shape-selector-bar" style={{ padding: '8px 15px', background: 'rgba(255,255,255,0.05)', display: 'flex', gap: 20, alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.6 }}>POLISHED SHAPES:</span>
@@ -737,14 +737,14 @@ const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
                                           <td><input className="cell-input" style={{ width: 45 }} value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs || ""} onChange={e => onValueChange(range, colour, clarity, 'pcs', e.target.value, shape)} /></td>
                                           <td><input className="cell-input" style={{ width: 45 }} value={state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts || ""} onChange={e => onValueChange(range, colour, clarity, 'cts', e.target.value, shape)} /></td>
                                           <td style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--gold)', fontWeight: 700, minWidth: 45 }}>{wP || ""}</td>
-                                          <td style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--gold)', fontWeight: 700, minWidth: 50 }}>{formatNum(wC, 2)}</td>
+                                          <td style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--gold)', fontWeight: 700, minWidth: 50 }}>{formatNum(wC, 3)}</td>
                                        </React.Fragment>
                                     );
                                  })}
                                  <td className="row-total">{sP}</td>
-                                 <td className="row-total">{formatNum(sC, 2)}</td>
+                                 <td className="row-total">{formatNum(sC, 3)}</td>
                                  <td className="row-total" style={{ color: 'var(--gold)' }}>{wholeRowP}</td>
-                                 <td className="row-total" style={{ color: 'var(--gold)' }}>{formatNum(wholeRowC, 2)}</td>
+                                 <td className="row-total" style={{ color: 'var(--gold)' }}>{formatNum(wholeRowC, 3)}</td>
                               </tr>
                            );
                         })}
@@ -781,15 +781,15 @@ const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
                            {CLARITY_LIST.map(clarity => (
                               <React.Fragment key={clarity}>
                                  <td style={{ color: 'var(--text2)' }}>{clarityTotals[clarity].p || "0"}</td>
-                                 <td style={{ color: 'var(--text2)' }}>{formatNum(clarityTotals[clarity].c, 2) || "0.00"}</td>
+                                 <td style={{ color: 'var(--text2)' }}>{formatNum(clarityTotals[clarity].c, 3) || "0.000"}</td>
                                  <td style={{ color: 'var(--gold)', background: 'rgba(255,255,255,0.02)' }}>{clarityTotals[clarity].wp || "0"}</td>
-                                 <td style={{ color: 'var(--gold)', background: 'rgba(255,255,255,0.02)' }}>{formatNum(clarityTotals[clarity].wc, 2) || "0.00"}</td>
+                                 <td style={{ color: 'var(--gold)', background: 'rgba(255,255,255,0.02)' }}>{formatNum(clarityTotals[clarity].wc, 3) || "0.000"}</td>
                               </React.Fragment>
                            ))}
                            <td className="row-total" style={{ background: '#1e3a8a', color: '#fff' }}>{gSP}</td>
-                           <td className="row-total" style={{ background: '#1e3a8a', color: '#fff' }}>{formatNum(gSC, 2)}</td>
+                           <td className="row-total" style={{ background: '#1e3a8a', color: '#fff' }}>{formatNum(gSC, 3)}</td>
                            <td className="row-total" style={{ background: 'var(--card2)', color: 'var(--gold)' }}>{gWP}</td>
-                           <td className="row-total" style={{ background: 'var(--card2)', color: 'var(--gold)' }}>{formatNum(gWC, 2)}</td>
+                           <td className="row-total" style={{ background: 'var(--card2)', color: 'var(--gold)' }}>{formatNum(gWC, 3)}</td>
                         </tr>
                      );
                   })()}
@@ -860,7 +860,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
       <div className="card glass category-card" style={{ marginBottom: 24 }}>
          <div className="card-hdr" style={{ background: '#16a34a', color: '#fff', borderBottom: '2px solid #15803d', padding: '10px 15px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-               <span style={{ fontSize: 18, fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>Polish Calculation: {range} <span style={{ fontSize: 19, fontWeight: 600, marginLeft: 16 }}>Round: VVS-VS2: {formatNum(roundHighAvg, 2)} | SI1-I2: {formatNum(roundLowAvg, 2)} | Fancy: VVS-VS2: {formatNum(fancyHighAvg, 2)} | SI1-I2: {formatNum(fancyLowAvg, 2)} | POL MM: {polMM}</span></span>
+               <span style={{ fontSize: 18, fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>Polish Calculation: {range} <span style={{ fontSize: 19, fontWeight: 600, marginLeft: 16 }}>Round: VVS-VS2: {formatNum(roundHighAvg, 3)} | SI1-I2: {formatNum(roundLowAvg, 3)} | Fancy: VVS-VS2: {formatNum(fancyHighAvg, 3)} | SI1-I2: {formatNum(fancyLowAvg, 3)} | POL MM: {polMM}</span></span>
             </div>
          </div>
 
@@ -958,7 +958,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                        ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
                                        : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
                                     const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * perClarityMultiplier);
-                                    const polC = parseFloat(formatNum(roughC * (perClarityYield / 100), 2).replace(/,/g, ''));
+                                    const polC = parseFloat(formatNum(roughC * (perClarityYield / 100), 3).replace(/,/g, ''));
 
                                     const priceShape = shape === "Round" ? "Round" : "Fancy";
                                     const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
@@ -968,14 +968,14 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                     return (
                                        <React.Fragment key={clarity}>
                                           <td>{polP || ""}</td>
-                                          <td>{formatNum(polC, 2)}</td>
+                                          <td>{formatNum(polC, 3)}</td>
                                           <td>{formatNum(price, 2)}</td>
                                           <td className="text-gold">{formatNum(totalVal, 2)}</td>
                                        </React.Fragment>
                                     );
                                  })}
                                  <td className="row-total">{rowP}</td>
-                                 <td className="row-total">{formatNum(rowC, 2)}</td>
+                                 <td className="row-total">{formatNum(rowC, 3)}</td>
                                  <td className="row-total text-green">$ {formatNum(rowV, 2)}</td>
                               </tr>
                            );
@@ -1007,7 +1007,7 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                  ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
                                  : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
                               const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * perClarityMultiplier);
-                              const polC = parseFloat(formatNum(roughC * (perClarityYield / 100), 2).replace(/,/g, ''));
+                              const polC = parseFloat(formatNum(roughC * (perClarityYield / 100), 3).replace(/,/g, ''));
 
                               const priceShape = shape === "Round" ? "Round" : "Fancy";
                               const price = prices?.[priceShape]?.[pIdxTotal]?.[colour]?.[clarity] || 0;
@@ -1027,13 +1027,13 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                            {CLARITY_LIST.map(clarity => (
                               <React.Fragment key={clarity}>
                                  <td>{clarityTotals[clarity].p || "0"}</td>
-                                 <td>{formatNum(clarityTotals[clarity].c, 2)}</td>
+                                 <td>{formatNum(clarityTotals[clarity].c, 3)}</td>
                                  <td style={{ background: 'rgba(255,255,255,0.02)', opacity: 0.5 }}>-</td>
                                  <td className="text-gold">{formatNum(clarityTotals[clarity].v, 2)}</td>
                               </React.Fragment>
                            ))}
                            <td className="row-total" style={{ background: '#166534', color: '#fff' }}>{gP}</td>
-                           <td className="row-total" style={{ background: '#166534', color: '#fff' }}>{formatNum(gC, 2)}</td>
+                           <td className="row-total" style={{ background: '#166534', color: '#fff' }}>{formatNum(gC, 3)}</td>
                            <td className="row-total text-green" style={{ background: '#166534', color: '#fff', fontSize: 14 }}>$ {formatNum(gV, 2)}</td>
                         </tr>
                      );
@@ -1152,11 +1152,11 @@ const SizeProfileTable = ({ state, onAddRange, onDeleteRange, onUpdateRange, onU
             }}>+ Add Category</button>
          </div>
          <table className="ef-table-excel">
-<thead>
-                <tr>
-                   <th style={{ width: 120 }}>SIZE</th>
-                   <th>CTS</th>
-                   <th style={{ width: 80 }}>%</th>
+            <thead>
+               <tr>
+                  <th style={{ width: 120 }}>SIZE</th>
+                  <th>CTS</th>
+                  <th style={{ width: 80 }}>%</th>
                   <th>AVG SIZE</th>
                   <th>PCS</th>
                   <th style={{ width: 40 }}></th>
@@ -1602,7 +1602,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                {activeTab === 'assortment' && (
                   <div className="category-stack">
                      <div className="section-hdr">
-                        <h2 className="title-glow">Rough Assortment Input (Image 1)</h2>
+                        <h2 className="title-glow">Rough Assortment Input</h2>
                      </div>
                      {state.ranges.length === 0 && (
                         <div className="empty-state">No categories added. Go to "Parcel Input" to add Sieve Ranges.</div>
@@ -1624,7 +1624,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                )}
                {activeTab === 'polish' && (
                   <div className="category-stack">
-                     <div className="section-hdr"><h2 className="title-glow">Polished Yield Calculation (Image 2)</h2></div>
+                     <div className="section-hdr"><h2 className="title-glow">Polished Yield Calculation</h2></div>
                      {state.ranges.map(r => (
                         <PolishTable
                            key={r}
