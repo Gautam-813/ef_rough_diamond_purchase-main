@@ -644,7 +644,10 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
    const samplePcs = parseFloat(sample.pcs) || 0;
    const sampleCts = parseFloat(sample.cts) || 0;
    const sampleAvg = samplePcs > 0 ? sampleCts / samplePcs : 0;
-   const scaleFactor = (targetCts > 0 && sampleCts > 0) ? (targetCts / sampleCts) : 1;
+   
+   // DUAL SCALING FACTORS: Separate pieces and carats to ensure perfect reconciliation
+   const scaleFactorCts = (targetCts > 0 && sampleCts > 0) ? (targetCts / sampleCts) : 1;
+   const scaleFactorPcs = (targetPcs > 0 && samplePcs > 0) ? (targetPcs / samplePcs) : 1;
 
    const rangeCfg = state.rangeConfig?.[range] || {};
    const selectedShapes = rangeCfg.selectedShapes || ["Round"];
@@ -728,8 +731,8 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                                     const p = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                                     const c = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
                                     const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
-                                    const wP = Math.round(p * scaleFactor * cMult);
-                                    const wC = c * scaleFactor * cMult;
+                                    const wP = Math.round(p * scaleFactorPcs * cMult);
+                                    const wC = c * scaleFactorCts * cMult;
                                     sP += p; sC += c;
                                     wholeRowP += wP; wholeRowC += wC;
                                     return (
@@ -761,8 +764,8 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
                               const p = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                               const c = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
                               const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
-                              const wp = Math.round(p * scaleFactor * cMult);
-                              const wc = (c * scaleFactor * cMult);
+                              const wp = Math.round(p * scaleFactorPcs * cMult);
+                              const wc = (c * scaleFactorCts * cMult);
 
                               clarityTotals[clarity].p += p;
                               clarityTotals[clarity].c += c;
@@ -816,9 +819,11 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
 
    const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
    const targetCts = parseFloat(target.cts) || 0;
+   const targetPcs = target.avg > 0 ? Math.round(targetCts / target.avg) : 0;
 
    const sample = state.sampleConfig?.[range] || { pcs: 0, cts: 0 };
-   const rangeScaleFactor = (targetCts > 0 && sample.cts > 0) ? (targetCts / sample.cts) : 1;
+   const scaleFactorCts = (targetCts > 0 && sample.cts > 0) ? (targetCts / sample.cts) : 1;
+   const scaleFactorPcs = (targetPcs > 0 && sample.pcs > 0) ? (targetPcs / sample.pcs) : 1;
 
    // Calculate avg size per clarity group (VVS-VS2 and SI1-I2)
    const clarityGroups = {
@@ -831,19 +836,19 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
          for (const clarity of clarities) {
             const assortmentCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
             const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
-            if (assortmentCts > 0 && roughP_sample > 0) {
-               const isRound = shape === "Round";
-               const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
-               const perClarityYield = isRound
-                  ? (parseFloat(roundYieldByClarity[clarity]) || roundYield)
-                  : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
-               const perClarityMultiplier = isRound
-                  ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
-                  : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
-               const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * perClarityMultiplier);
-               const polC = (assortmentCts * rangeScaleFactor * cMult) * (perClarityYield / 100);
-               if (polP > 0) return polC / polP;
-            }
+               if (assortmentCts > 0 && roughP_sample > 0) {
+                  const isRound = shape === "Round";
+                  const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                  const perClarityYield = isRound
+                     ? (parseFloat(roundYieldByClarity[clarity]) || roundYield)
+                     : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
+                  const perClarityMultiplier = isRound
+                     ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
+                     : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
+                  const polP = Math.round((roughP_sample * scaleFactorPcs * cMult) * perClarityMultiplier);
+                  const polC = (assortmentCts * scaleFactorCts * cMult) * (perClarityYield / 100);
+                  if (polP > 0) return polC / polP;
+               }
          }
       }
       return 0;
@@ -945,7 +950,6 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                     const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
                                     const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
 
-                                    const roughC = roughC_sample * rangeScaleFactor * cMult;
                                     const isRound = shape === "Round";
                                     const isHighClarity = clarityGroups.high.includes(clarity);
                                     const pIdx = isRound
@@ -957,8 +961,8 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                                     const perClarityMultiplier = isRound
                                        ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
                                        : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
-                                    const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * perClarityMultiplier);
-                                    const polC = parseFloat(formatNum(roughC * (perClarityYield / 100), 3).replace(/,/g, ''));
+                                    const polP = Math.round((roughP_sample * scaleFactorPcs * cMult) * perClarityMultiplier);
+                                    const polC = parseFloat(formatNum((roughC_sample * scaleFactorCts * cMult) * (perClarityYield / 100), 3).replace(/,/g, ''));
 
                                     const priceShape = shape === "Round" ? "Round" : "Fancy";
                                     const price = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
@@ -994,7 +998,6 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                               const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
                               const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
 
-                              const roughC = roughC_sample * rangeScaleFactor * cMult;
                               const isRound = shape === "Round";
                               const isHighClarity = clarityGroups.high.includes(clarity);
                               const pIdxTotal = isRound
@@ -1006,8 +1009,8 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                               const perClarityMultiplier = isRound
                                  ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
                                  : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
-                              const polP = Math.round((roughP_sample * rangeScaleFactor * cMult) * perClarityMultiplier);
-                              const polC = parseFloat(formatNum(roughC * (perClarityYield / 100), 3).replace(/,/g, ''));
+                              const polP = Math.round((roughP_sample * scaleFactorPcs * cMult) * perClarityMultiplier);
+                              const polC = parseFloat(formatNum((roughC_sample * scaleFactorCts * cMult) * (perClarityYield / 100), 3).replace(/,/g, ''));
 
                               const priceShape = shape === "Round" ? "Round" : "Fancy";
                               const price = prices?.[priceShape]?.[pIdxTotal]?.[colour]?.[clarity] || 0;
