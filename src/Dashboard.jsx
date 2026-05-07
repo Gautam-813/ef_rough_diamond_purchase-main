@@ -213,19 +213,24 @@ export default function Dashboard() {
    const handleCreateParcel = async () => {
       const name = prompt("Parcel Name (e.g. BR-101):");
       if (!name) return;
-      const newP = await api.createParcel(activeTender.id, {
-         number: `P-${Math.floor(Math.random() * 1000)}`,
-         name: name,
-         parcel_type: "SW",
-         total_cts: 100,
-         pcs: 0,
-         calc_state: { table: {}, yield: 44, labour: 35, strategy: 'Whole' }
-      });
+      try {
+         const newP = await api.createParcel(activeTender.id, {
+            number: `P-${Math.floor(Math.random() * 1000)}`,
+            name: name,
+            parcel_type: "SW",
+            total_cts: 100,
+            pcs: 0,
+            calc_state: { table: {}, yield: 44, labour: 35, strategy: 'Whole' }
+         });
 
-      // Update local state
-      const updatedTender = { ...activeTender, parcels: [...(activeTender.parcels || []), newP] };
-      setActiveTender(updatedTender);
-      setTenders(tenders.map(t => t.id === activeTender.id ? updatedTender : t));
+         // Update local state
+         const updatedTender = { ...activeTender, parcels: [...(activeTender.parcels || []), newP] };
+         setActiveTender(updatedTender);
+         setTenders(tenders.map(t => t.id === activeTender.id ? updatedTender : t));
+      } catch (err) {
+         console.error("Failed to create parcel", err);
+         alert("❌ Error: Failed to create parcel. " + err.message);
+      }
    };
 
    const handleShare = async (e, tender) => {
@@ -424,7 +429,7 @@ export default function Dashboard() {
                                           return sum + (avg > 0 ? Math.round(cts / avg) : 0);
                                        }, 0);
                                     })()}</td>
-                                    <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                                    <td>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '-'}</td>
                                     <td>
                                        <button className="btn-sm btn-primary" onClick={() => selectParcel(p)}>Open Calc</button>
                                        <button className="btn-sm btn-outline" style={{ borderColor: '#f87171', color: '#f87171', marginLeft: 5 }} onClick={(e) => handleDeleteParcel(e, p.id)}>Delete</button>
@@ -1431,14 +1436,29 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
             api.updateTender(tender.id, tenderUpdate)
          ]);
 
-         // Update parent state with the fresh data from server
-         onUpdate({ ...savedTender, parcels: tender.parcels.map(p => p.id === savedParcel.id ? savedParcel : p) });
+// Merge server data correctly:
+          // 1. Start with the fresh tender object from server (which has ALL current parcels from DB)
+          // 2. Ensure our currently edited parcel is the one returned from savedParcel
+          const freshParcels = (savedTender.parcels || []).map(p => 
+             p.id === savedParcel.id ? savedParcel : p
+          );
+          
+          const finalUpdate = { ...savedTender, parcels: freshParcels };
+          onUpdate(finalUpdate);
 
-         alert("✅ Data Saved Successfully!");
-      } catch (err) {
-         console.error("Save failed", err);
-         alert("❌ Save failed. Please check your connection.");
-      }
+          // Force page refresh to ensure data is loaded fresh
+          window.dispatchEvent(new Event('storage'));
+
+alert("✅ Data Saved Successfully!");
+       } catch (err) {
+          console.error("Save failed", err);
+          if (err.message === "SESSION_EXPIRED") {
+             alert("Session expired! Please login again.");
+             window.location.href = "/";
+          } else {
+             alert("❌ Save failed: " + err.message);
+          }
+       }
       setSaving(false);
    };
 
