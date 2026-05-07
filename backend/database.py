@@ -7,14 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# We use SQLite for local development, but this can be changed to PostgreSQL in .env
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./diamond_erp.db")
+# Hardcoded PostgreSQL connection to Neon - ensures data persistence
+# Using Neon PostgreSQL for production reliability
+SQLALCHEMY_DATABASE_URL = "postgresql://neondb_owner:npg_cCV10ZjmWYBL@ep-silent-feather-ancnww5y.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
-# Use NullPool only for PostgreSQL (Neon) to handle unstable connections
-# SQLite doesn't need it and it can cause issues there
-engine_args = {}
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
-    engine_args["connect_args"] = {"check_same_thread": False}
+# Use NullPool for PostgreSQL (Neon) to handle unstable connections properly
+from sqlalchemy.pool import NullPool
+engine_args = {"poolclass": NullPool}
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_args)
 
