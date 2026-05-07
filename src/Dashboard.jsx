@@ -831,11 +831,16 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
       low: ['SI1', 'SI2', 'I1', 'I2']
    };
 
-   const calcGroupAvgSize = (shape, clarities) => {
-      for (const colour of COLOUR_LIST) {
-         for (const clarity of clarities) {
-            const assortmentCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-            const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
+   const calcGroupAvgSize = (category, clarities) => {
+      let totalPolC = 0;
+      let totalPolP = 0;
+      const shapesToScan = category === "Round" ? ["Round"] : selectedShapes.filter(s => s !== "Round");
+
+      for (const shape of shapesToScan) {
+         for (const colour of COLOUR_LIST) {
+            for (const clarity of clarities) {
+               const assortmentCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+               const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                if (assortmentCts > 0 && roughP_sample > 0) {
                   const isRound = shape === "Round";
                   const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
@@ -847,11 +852,13 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
                      : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
                   const polP = Math.round((roughP_sample * scaleFactorPcs * cMult) * perClarityMultiplier);
                   const polC = (assortmentCts * scaleFactorCts * cMult) * (perClarityYield / 100);
-                  if (polP > 0) return polC / polP;
+                  totalPolP += polP;
+                  totalPolC += polC;
                }
+            }
          }
       }
-      return 0;
+      return totalPolP > 0 ? totalPolC / totalPolP : 0;
    };
 
    const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
