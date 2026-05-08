@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatNum } from '../utils/calculations';
 import { getPriceIdxByWeight } from '../utils/priceUtils';
-import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES, MASTER_SIZE_CHART } from '../constants/diamondData';
+import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES, MASTER_SIZE_CHART, isHotSize } from '../constants/diamondData';
+import { calculateParcelTotals } from '../utils/parcelMath';
 
 const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
   const [selectedParcels, setSelectedParcels] = useState([]);
@@ -111,148 +112,90 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     const state = parcel.calc_state;
     if (!state || !state.table) return null;
 
-    let roughCts = 0;
-    let roughPcs = 0;
-    let polCts = 0;
-    let polPcs = 0;
-    let polVal = 0;
-    let usablePol = 0;
-    let usableVal = 0;
-    let nonUsablePol = 0;
-    let nonUsableVal = 0;
+    // Use parcel-specific prices if available, otherwise fallback to global prices
+    const parcelPrices = state.prices || prices;
 
-    const colorProfile = {};
-    const clarityProfile = {};
-    COLOUR_LIST.forEach(c => colorProfile[c] = 0);
-    CLARITY_LIST.forEach(c => clarityProfile[c] = 0);
+    const totals = calculateParcelTotals(state, parcel, parcelPrices, COLOUR_LIST, CLARITY_LIST, isHotSize);
+    if (!totals) return null;
 
-    const fluo = state.fluo || { "None": 100, "Fnt": 0, "Med/Stg": 0 };
-    
-    // For Shape & Size comparison
-    let totalRoundPolP = 0;
-    let totalRoundPolC = 0;
-    const allShapes = new Set();
-
-    const ranges = state.ranges || [];
-    const clarityGroups = {
-      high: ['VVS', 'VS1', 'VS2'],
-      low: ['SI1', 'SI2', 'I1', 'I2']
-    };
-
-    ranges.forEach(r => {
-      const target = state.sizeProfile?.[r] || { cts: 0 };
-      const sampleRoughCts = getRoughCtsByRange(state, r);
-      const scaleFactor = (target.cts > 0 && sampleRoughCts > 0) ? (target.cts / sampleRoughCts) : 1;
-      const rangeCfg = state.rangeConfig?.[r] || { yield: 44, roundYieldByClarity: {}, fancyYieldByClarity: {}, roundMultiplierByClarity: {}, fancyMultiplierByClarity: {} };
-      const defaultYield = parseFloat(rangeCfg.yield) || 44;
-      const roundYieldByClarity = rangeCfg.roundYieldByClarity || {};
-      const fancyYieldByClarity = rangeCfg.fancyYieldByClarity || {};
-      const roundMultiplierByClarity = rangeCfg.roundMultiplierByClarity || {};
-      const fancyMultiplierByClarity = rangeCfg.fancyMultiplierByClarity || {};
-      const roundMultiplier = parseFloat(rangeCfg.roundMultiplier) || 1;
-      const fancyMultiplier = parseFloat(rangeCfg.fancyMultiplier) || 1.5;
-
-      const getGroupAvgSize = (shape, clarities) => {
-        let totalPolC = 0;
-        let totalPolP = 0;
-        for (const col of COLOUR_LIST) {
-          for (const clr of clarities) {
-            const sPcs = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
-            const sCts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
-            if (sCts > 0 && sPcs > 0) {
-              const isRound = shape === "Round";
-              const yld = isRound ? (parseFloat(roundYieldByClarity[clr]) || defaultYield) : (parseFloat(fancyYieldByClarity[clr]) || defaultYield);
-              const mult = isRound ? (parseFloat(roundMultiplierByClarity[clr]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clr]) || fancyMultiplier);
-              const polP = Math.round((sPcs * scaleFactor) * mult);
-              const polC = sCts * scaleFactor * (yld / 100);
-              totalPolC += polC;
-              totalPolP += polP;
-            }
-          }
-        }
-        return totalPolP > 0 ? totalPolC / totalPolP : 0;
-      };
-
-      const groupAvgs = {
-        Round: {
-          high: getGroupAvgSize("Round", clarityGroups.high),
-          low: getGroupAvgSize("Round", clarityGroups.low)
-        },
-        Fancy: {
-          high: getGroupAvgSize("Fancy", clarityGroups.high),
-          low: getGroupAvgSize("Fancy", clarityGroups.low)
-        }
-      };
-
-      COLOUR_LIST.forEach(col => {
-        Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
-          CLARITY_LIST.forEach(clr => {
-            const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
-            const sP = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
-            const isRound = shape === "Round";
-            const yieldPct = isRound 
-              ? (parseFloat(roundYieldByClarity[clr]) || defaultYield)
-              : (parseFloat(fancyYieldByClarity[clr]) || defaultYield);
-            const mult = isRound 
-              ? (parseFloat(roundMultiplierByClarity[clr]) || roundMultiplier)
-              : (parseFloat(fancyMultiplierByClarity[clr]) || fancyMultiplier);
-            const polC = (sC * scaleFactor) * (yieldPct / 100);
-            const polP = Math.round((sP * scaleFactor) * mult);
-            
-            const isHigh = clarityGroups.high.includes(clr);
-            const priceShape = isRound ? "Round" : "Fancy";
-            const grpAvg = isHigh ? groupAvgs[priceShape].high : groupAvgs[priceShape].low;
-            const priceIdx = getPriceIdxByWeight(grpAvg);
-            const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
-            const val = polC * price;
-
-            polCts += polC;
-            polVal += val;
-            polPcs += parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
-
-            colorProfile[col] += polC;
-            clarityProfile[clr] += polC;
-
-            if (shape === "Round") {
-              totalRoundPolP += Math.round((parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0) * scaleFactor);
-              totalRoundPolC += polC;
-            }
-            allShapes.add(shape);
-
-            const isUsable = ["DEF", "G", "H"].includes(col) && ["VVS", "VS1"].includes(clr);
-            if (isUsable) {
-              usablePol += polC;
-              usableVal += val;
-            } else {
-              nonUsablePol += polC;
-              nonUsableVal += val;
-            }
-          });
-        });
-      });
-      roughCts += parseFloat(target.cts) || 0;
-      const avgSize = parseFloat(target.avg) || 0;
-      roughPcs += avgSize > 0 ? Math.round((parseFloat(target.cts) || 0) / avgSize) : 0;
-    });
-    
-    // Fallback: If no rough cts entered in size profile, use the parcel total_cts
-    if (roughCts <= 0 && parcel.total_cts > 0) {
-      roughCts = parcel.total_cts;
-    }
-    if (roughPcs <= 0 && parcel.pcs > 0) {
-      roughPcs = parcel.pcs;
-    }
+    const roughCts = (state.ranges || []).reduce((sum, r) => sum + (parseFloat(state.sizeProfile?.[r]?.cts) || 0), 0) || parcel.total_cts || 0;
+    const roughPcs = (state.ranges || []).reduce((sum, r) => {
+      const data = state.sizeProfile?.[r] || {};
+      const cts = parseFloat(data.cts) || 0;
+      const avg = parseFloat(data.avg) || 0;
+      return sum + (avg > 0 ? Math.round(cts / avg) : 0);
+    }, 0) || parcel.pcs || 0;
 
     const labour = parseFloat(state.labour) || 0;
-
     // Per Ct Pol $ = Polish Value ÷ Rough Cts
-    const perCtPol = polVal / roughCts;
-
+    const perCtPol = roughCts > 0 ? totals.totalValue / roughCts : 0;
     // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
     const finalBid = perCtPol - labour;
 
-    const avgRoundSize = totalRoundPolP > 0 ? totalRoundPolC / totalRoundPolP : 0;
+    // Calculate avg size per clarity group to get the MM display
+    // Mirroring PolishTable logic for UI consistency
+    const clarityGroups = {
+       high: ['VVS', 'VS1', 'VS2'],
+       low: ['SI1', 'SI2', 'I1', 'I2']
+    };
+
+    const calcGroupAvgSize = (category, clarities) => {
+      let tPolC = 0;
+      let tPolP = 0;
+      (state.ranges || []).forEach(r => {
+        const target = state.sizeProfile?.[r] || { cts: 0, avg: 0 };
+        const sample = state.sampleConfig?.[r] || { cts: 0, pcs: 0 };
+        const sFactorCts = (parseFloat(target.cts) > 0 && parseFloat(sample.cts) > 0) ? (parseFloat(target.cts) / parseFloat(sample.cts)) : 1;
+        const sFactorPcs = (parseFloat(target.avg) > 0 && parseFloat(target.cts) > 0 && parseFloat(sample.pcs) > 0) ? (Math.round(parseFloat(target.cts)/parseFloat(target.avg)) / parseFloat(sample.pcs)) : 1;
+        
+        const rCfg = state.rangeConfig?.[r] || {};
+        const roundYield = parseFloat(rCfg.roundYield) || 44;
+        const fancyYield = parseFloat(rCfg.fancyYield) || 40;
+        const roundMultiplier = parseFloat(rCfg.roundMultiplier) || 1;
+        const fancyMultiplier = parseFloat(rCfg.fancyMultiplier) || 1.5;
+        const clarityMultipliers = rCfg.clarityMultipliers || {};
+        const roundYieldByClarity = rCfg.roundYieldByClarity || {};
+        const fancyYieldByClarity = rCfg.fancyYieldByClarity || {};
+        const roundMultiplierByClarity = rCfg.roundMultiplierByClarity || {};
+        const fancyMultiplierByClarity = rCfg.fancyMultiplierByClarity || {};
+
+        COLOUR_LIST.forEach(colour => {
+          const shapesInTable = Object.keys(state.table?.[r]?.[colour] || {});
+          const shapesToScan = category === "Round" ? ["Round"] : shapesInTable.filter(s => s !== "Round");
+
+          shapesToScan.forEach(shape => {
+            clarities.forEach(clarity => {
+              const roughP_sample = parseFloat(state.table?.[r]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
+              const assortmentCts = parseFloat(state.table?.[r]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+              if (assortmentCts > 0 && roughP_sample > 0) {
+                const isRound = shape === "Round";
+                const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                const yld = isRound ? (parseFloat(roundYieldByClarity[clarity]) || roundYield) : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
+                const mult = isRound ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
+                
+                const polP = Math.round((roughP_sample * sFactorPcs * cMult) * mult);
+                const polC = (assortmentCts * sFactorCts * cMult) * (yld / 100);
+                tPolP += polP;
+                tPolC += polC;
+              }
+            });
+          });
+        });
+      });
+      return tPolP > 0 ? tPolC / tPolP : 0;
+    };
+
+    const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
+    const roundLowAvg = calcGroupAvgSize('Round', clarityGroups.low);
+    const avgRoundSize = roundHighAvg > 0 ? (roundHighAvg + (roundLowAvg || roundHighAvg)) / 2 : 0;
     const polMM = getMMByWeight(avgRoundSize, MASTER_SIZE_CHART);
+
+    const allShapes = new Set();
+    (state.ranges || []).forEach(r => {
+      COLOUR_LIST.forEach(col => {
+        Object.keys(state.table?.[r]?.[col] || {}).forEach(s => allShapes.add(s));
+      });
+    });
 
     return {
       id: parcel.id,
@@ -260,36 +203,23 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
       number: parcel.number,
       roughCts,
       roughPcs,
-      polCts,
-      polPcs,
-      yield: roughCts > 0 ? (polCts / roughCts) * 100 : 0,
-      polVal,
-      polPerRough: roughCts > 0 ? polVal / roughCts : 0,
-      usablePol,
-      usableVal,
-      nonUsablePol,
-      nonUsableVal,
-      colorProfile,
-      clarityProfile,
-      fluo,
+      polCts: totals.totalCts,
+      polPcs: totals.totalPcs,
+      yield: roughCts > 0 ? (totals.totalCts / roughCts) * 100 : 0,
+      polVal: totals.totalValue,
+      polPerRough: roughCts > 0 ? totals.totalValue / roughCts : 0,
+      usablePol: totals.usableData.usablePol,
+      usableVal: totals.usableData.usableVal,
+      nonUsablePol: totals.usableData.nonUsablePol,
+      nonUsableVal: totals.usableData.nonUsableVal,
+      colorProfile: totals.colorProfile,
+      clarityProfile: totals.clarityProfile,
+      fluo: state.fluo || { "None": 100, "Fnt": 0, "Med/Stg": 0 },
       polMM,
       avgRoundSize,
       shapes: Array.from(allShapes).join(', '),
       finalBid
     };
-  };
-
-  // Helper function for rough cts calculation
-  const getRoughCtsByRange = (state, range) => {
-    let total = 0;
-    COLOUR_LIST.forEach(col => {
-      Object.keys(state.table?.[range]?.[col] || {}).forEach(shape => {
-        CLARITY_LIST.forEach(clr => {
-          total += parseFloat(state.table?.[range]?.[col]?.[shape]?.[clr]?.cts) || 0;
-        });
-      });
-    });
-    return total;
   };
 
   // Handle parcel selection

@@ -68,24 +68,38 @@ export const calculateParcelTotals = (state, parcel, globalPrices, COLOUR_LIST, 
       rangeWise[r] = { pcs: 0, cts: 0, val: 0, roughCts: targetCts };
 
       // Helper for pIdx within this range
-      const getGroupAvgSize = (shape, clarities) => {
-         for (const colour of COLOUR_LIST) {
-            for (const clarity of clarities) {
-               const sCts = parseFloat(state.table?.[r]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-               const sPcs = parseFloat(state.table?.[r]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
-               if (sCts > 0 && sPcs > 0) {
-                  const isRound = shape === "Round";
-                  const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
-                  const yld = isRound ? (parseFloat(roundYieldByClarity[clarity]) || roundYield) : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
-                  const mult = isRound ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
+      const getGroupAvgSize = (category, clarities) => {
+         let totalPolC = 0;
+         let totalPolP = 0;
+         
+         (state.ranges || []).forEach(range => {
+            if (range !== r) return; // Only scan current range
+            COLOUR_LIST.forEach(colour => {
+               const shapesInTable = Object.keys(state.table?.[range]?.[colour] || {});
+               const shapesToScan = category === "Round" 
+                  ? ["Round"] 
+                  : shapesInTable.filter(s => s !== "Round");
 
-                  const polP = Math.round((sPcs * rangeScaleFactor * cMult) * mult);
-                  const polC = (sCts * rangeScaleFactor * cMult) * (yld / 100);
-                  if (polP > 0) return polC / polP;
-               }
-            }
-         }
-         return 0;
+               shapesToScan.forEach(shape => {
+                  clarities.forEach(clarity => {
+                     const sCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+                     const sPcs = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
+                     if (sCts > 0 && sPcs > 0) {
+                        const isRound = shape === "Round";
+                        const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                        const yld = isRound ? (parseFloat(roundYieldByClarity[clarity]) || roundYield) : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
+                        const mult = isRound ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
+
+                        const polP = Math.round((sPcs * rangeScaleFactor * cMult) * mult);
+                        const polC = (sCts * rangeScaleFactor * cMult) * (yld / 100);
+                        totalPolC += polC;
+                        totalPolP += polP;
+                     }
+                  });
+               });
+            });
+         });
+         return totalPolP > 0 ? totalPolC / totalPolP : 0;
       };
 
       const avgs = {
