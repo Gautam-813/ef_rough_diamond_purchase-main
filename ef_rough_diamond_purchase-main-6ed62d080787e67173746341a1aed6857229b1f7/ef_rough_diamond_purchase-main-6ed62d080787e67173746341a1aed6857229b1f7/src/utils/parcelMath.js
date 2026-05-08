@@ -137,9 +137,15 @@ export const calculateParcelTotals = (state, parcel, globalPrices, COLOUR_LIST, 
                const grpAvg = isHigh ? avgs[lookupShape].high : avgs[lookupShape].low;
                const pIdx = getPriceIdxByWeight(grpAvg);
 
+               // Use Previous Category Price logic (consistent with PolishTable)
+               const usePrevCfg = isRound ? (rCfg.roundUsePrevPrice || {}) : (rCfg.fancyUsePrevPrice || {});
+               const usePrev = usePrevCfg[clr];
+               const clrIdx = CLARITY_LIST.indexOf(clr);
+               const priceClarity = (usePrev && clrIdx > 0) ? CLARITY_LIST[clrIdx - 1] : clr;
+
                // Case-insensitive shape lookup in globalPrices
                const priceShapeKey = Object.keys(globalPrices || {}).find(k => k.toLowerCase() === lookupShape.toLowerCase()) || lookupShape;
-               const price = globalPrices?.[priceShapeKey]?.[pIdx]?.[col]?.[clr] || 0;
+               const price = globalPrices?.[priceShapeKey]?.[pIdx]?.[col]?.[priceClarity] || 0;
                const val = polC * price;
 
                totalPolCts += polC;
