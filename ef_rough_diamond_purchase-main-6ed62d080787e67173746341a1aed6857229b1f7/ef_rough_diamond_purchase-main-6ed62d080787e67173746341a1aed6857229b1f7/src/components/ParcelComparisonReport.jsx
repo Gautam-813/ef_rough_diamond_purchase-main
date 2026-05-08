@@ -109,7 +109,16 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
 
   // Calculate metrics for a parcel
   const calculateParcelMetrics = (parcel) => {
-    const state = parcel.calc_state;
+    if (!parcel) return null;
+    let state = parcel.calc_state;
+    if (typeof state === 'string') {
+      try {
+        state = JSON.parse(state);
+      } catch (e) {
+        console.error("Error parsing calc_state:", e);
+        return null;
+      }
+    }
     if (!state || !state.table) return null;
 
     // Use parcel-specific prices if available, otherwise fallback to global prices
