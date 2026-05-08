@@ -1,0 +1,66 @@
+[
+  {
+    "id": 2,
+    "name": "wer",
+    "date": "2026-04-27",
+    "viewing_date": null,
+    "created_at": "2026-04-27T14:45:53.809806",
+    "owner_id": 1
+  },
+  {
+    "id": 3,
+    "name": "ewr",
+    "date": "2026-04-27",
+    "viewing_date": null,
+    "created_at": "2026-04-27T14:50:34.740584",
+    "owner_id": 1
+  },
+  {
+    "id": 5,
+    "name": "Nita",
+    "date": "2026-04-27",
+    "viewing_date": null,
+    "created_at": "2026-04-27T15:55:37.923203",
+    "owner_id": 3
+  },
+  {
+    "id": 7,
+    "name": "LUCARA",
+    "date": "2026-05-02",
+    "viewing_date": "2026-05-05",
+    "created_at": "2026-05-02T14:41:28.911186",
+    "owner_id": 2
+  },
+  {
+    "id": 9,
+    "name": "Burgundy",
+    "date": "2026-05-06",
+    "viewing_date": "2026-04-16",
+    "created_at": "2026-05-06T16:32:02.229877",
+    "owner_id": 2
+  },
+  {
+    "id": 10,
+    "name": "KAO ",
+    "date": "2026-05-07",
+    "viewing_date": "2026-04-21",
+    "created_at": "2026-05-07T07:25:57.285344",
+    "owner_id": 2
+  },
+  {
+    "id": 11,
+    "name": "test",
+    "date": "2026-05-07",
+    "viewing_date": null,
+    "created_at": "2026-05-07T12:04:57.742911",
+    "owner_id": 2
+  },
+  {
+    "id": 12,
+    "name": "ODC ",
+    "date": "2026-05-07",
+    "viewing_date": null,
+    "created_at": "2026-05-07T14:48:01.735057",
+    "owner_id": 2
+  }
+]

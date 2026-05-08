@@ -1702,7 +1702,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                {activeTab === 'assortment' && (
                   <div className="category-stack">
                      <div className="section-hdr">
-                        <h2 className="title-glow">Rough Assortment Input (Image 1)</h2>
+                        <h2 className="title-glow">Rough Assortment Input</h2>
                      </div>
                      {state.ranges.length === 0 && (
                         <div className="empty-state">No categories added. Go to "Parcel Input" to add Sieve Ranges.</div>
@@ -1724,7 +1724,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                )}
                {activeTab === 'polish' && (
                   <div className="category-stack">
-                     <div className="section-hdr"><h2 className="title-glow">Polished Yield Calculation (Image 2)</h2></div>
+                     <div className="section-hdr"><h2 className="title-glow">Polished Yield Calculation</h2></div>
                      {state.ranges.map(r => (
                         <PolishTable
                            key={r}

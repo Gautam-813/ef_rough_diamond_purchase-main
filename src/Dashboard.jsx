@@ -486,27 +486,53 @@ export default function Dashboard() {
 
 // Component for IMAGE 3: Price Master (Benchmark Prices)
 const PriceMasterView = ({ prices, onUpdate }) => {
-   const [activeShape, setActiveShape] = useState("Round");
-   const [activeSieve, setActiveSieve] = useState("r1");
-   const fileInputRef = React.useRef(null);
+    const [activeShape, setActiveShape] = useState("Round");
+    const [activeSieve, setActiveSieve] = useState("r1");
+    const [editingValues, setEditingValues] = useState({});
+    const fileInputRef = React.useRef(null);
 
-   const uiShapes = ["Round", "Pear/Oval", "Baguette", "Triangles"];
-   const sieves = PRICE_SIEVES;
+    const uiShapes = ["Round", "Pear/Oval", "Baguette", "Triangles"];
+    const sieves = PRICE_SIEVES;
 
-   const handlePriceChange = (col, clr, val) => {
-      const next = { ...prices };
-      // Map non-round shapes to 'Fancy' in the backend
-      const priceShape = activeShape === "Round" ? "Round" : "Fancy";
-      const shapeKey = Object.keys(next).find(k => k.toLowerCase() === priceShape.toLowerCase()) || priceShape;
+    const handlePriceChange = (col, clr, val) => {
+       const next = { ...prices };
+       // Map non-round shapes to 'Fancy' in the backend
+       const priceShape = activeShape === "Round" ? "Round" : "Fancy";
+       const shapeKey = Object.keys(next).find(k => k.toLowerCase() === priceShape.toLowerCase()) || priceShape;
 
-      if (!next[shapeKey]) next[shapeKey] = {};
-      if (!next[shapeKey][activeSieve]) next[shapeKey][activeSieve] = {};
-      if (!next[shapeKey][activeSieve][col]) next[shapeKey][activeSieve][col] = {};
-      next[shapeKey][activeSieve][col][clr] = parseFloat(val) || 0;
-      onUpdate(next);
-   };
+       if (!next[shapeKey]) next[shapeKey] = {};
+       if (!next[shapeKey][activeSieve]) next[shapeKey][activeSieve] = {};
+       if (!next[shapeKey][activeSieve][col]) next[shapeKey][activeSieve][col] = {};
+       next[shapeKey][activeSieve][col][clr] = parseFloat(val) || 0;
+       onUpdate(next);
 
-   const handleExcelSync = async (e) => {
+       // Clear editing state for this cell
+       const editingKey = `${col}-${clr}`;
+       setEditingValues(prev => {
+          const next = { ...prev };
+          delete next[editingKey];
+          return next;
+       });
+    };
+
+    const handleInputChange = (col, clr, val) => {
+       // Update editing state while typing
+       const editingKey = `${col}-${clr}`;
+       setEditingValues(prev => ({
+          ...prev,
+          [editingKey]: val
+       }));
+    };
+
+    const handleInputBlur = (col, clr) => {
+       const editingKey = `${col}-${clr}`;
+       const value = editingValues[editingKey];
+       if (value !== undefined) {
+          handlePriceChange(col, clr, value);
+       }
+    };
+
+    const handleExcelSync = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
@@ -535,12 +561,16 @@ const PriceMasterView = ({ prices, onUpdate }) => {
       }
    };
 
-   // Map non-round to 'Fancy' for data lookup
-   const lookupShape = activeShape === "Round" ? "Round" : "Fancy";
-   const shapeKey = Object.keys(prices).find(k => k.toLowerCase() === lookupShape.toLowerCase());
-   const currentGrid = shapeKey ? (prices[shapeKey]?.[activeSieve] || {}) : {};
+    // Map non-round to 'Fancy' for data lookup
+    const lookupShape = activeShape === "Round" ? "Round" : "Fancy";
+    const shapeKey = Object.keys(prices).find(k => k.toLowerCase() === lookupShape.toLowerCase());
+    const currentGrid = shapeKey ? (prices[shapeKey]?.[activeSieve] || {}) : {};
 
-   return (
+
+
+
+
+    return (
       <div className="price-master-inner">
          <div className="shape-tabs" style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
             {uiShapes.map(s => (
@@ -591,23 +621,37 @@ const PriceMasterView = ({ prices, onUpdate }) => {
                      {CLARITY_LIST.map(c => <th key={c}>{c}</th>)}
                   </tr>
                </thead>
-               <tbody>
-                  {COLOUR_LIST.map(col => (
-                     <tr key={col}>
-                        <td style={{ fontWeight: 800, background: 'rgba(255,255,255,0.05)' }}>{col}</td>
-                        {CLARITY_LIST.map(clr => (
-                           <td key={clr}>
-                              <input
-                                 className="cell-input"
-                                 style={{ textAlign: 'center', background: 'transparent', border: 'none', color: '#fff', width: '100%' }}
-                                 value={currentGrid[col]?.[clr] !== undefined ? formatNum(currentGrid[col][clr], 2) : ""}
-                                 onChange={e => handlePriceChange(col, clr, e.target.value)}
-                              />
-                           </td>
-                        ))}
-                     </tr>
-                  ))}
-               </tbody>
+                <tbody>
+                   {COLOUR_LIST.map(col => (
+                      <tr key={col}>
+                         <td style={{ fontWeight: 800, background: 'rgba(255,255,255,0.05)' }}>{col}</td>
+                         {CLARITY_LIST.map(clr => {
+                            const editingKey = `${col}-${clr}`;
+                            const isEditing = editingKey in editingValues;
+                            const displayValue = isEditing
+                               ? editingValues[editingKey]
+                               : (currentGrid[col]?.[clr] !== undefined ? currentGrid[col][clr].toString() : "");
+
+                            return (
+                               <td key={clr}>
+                                  <input
+                                     className="cell-input"
+                                     style={{ textAlign: 'center', background: 'transparent', border: 'none', color: '#fff', width: '100%' }}
+                                     value={displayValue}
+                                     onChange={e => handleInputChange(col, clr, e.target.value)}
+                                     onBlur={() => handleInputBlur(col, clr)}
+                                     onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                           handleInputBlur(col, clr);
+                                        }
+                                     }}
+                                  />
+                               </td>
+                            );
+                         })}
+                      </tr>
+                   ))}
+                </tbody>
             </table>
          </div>
       </div>

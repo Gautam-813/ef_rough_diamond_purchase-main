@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "email": "admin@efdiamond.com",
+    "hashed_password": "$2b$12$cdyDO5qSzkU35SxvvQMcUujyXI52m5guTDLJyeX0wZ8Bzziugeo3O",
+    "role": "admin",
+    "is_active": true,
+    "created_at": "2026-04-27T14:09:57.265256"
+  },
+  {
+    "id": 2,
+    "email": "yatijadav@erpdiamond.com",
+    "hashed_password": "$2b$12$sg8cLQL05JN1FF.QvVFKTemhMDiX7Ke4zc9xWBpRLsvZyFdwrVTN6",
+    "role": "user",
+    "is_active": true,
+    "created_at": "2026-04-27T14:13:09.159665"
+  },
+  {
+    "id": 3,
+    "email": "sagarbarot@efdiamond.com",
+    "hashed_password": "$2b$12$kEcu.NJmJqhlAhaYZgCK0O1T0Syyn0LYG8hK5xvM.jLuGMJs3i88a",
+    "role": "user",
+    "is_active": true,
+    "created_at": "2026-04-27T15:08:43.795684"
+  }
+]
