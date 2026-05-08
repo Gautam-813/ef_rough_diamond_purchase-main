@@ -188,18 +188,22 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
       });
       return tPolP > 0 ? tPolC / tPolP : 0;
     };
-
-    const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
-    const roundLowAvg = calcGroupAvgSize('Round', clarityGroups.low);
-    const avgRoundSize = roundHighAvg > 0 ? (roundHighAvg + (roundLowAvg || roundHighAvg)) / 2 : 0;
-    const polMM = getMMByWeight(avgRoundSize, MASTER_SIZE_CHART);
-
     const allShapes = new Set();
     (state.ranges || []).forEach(r => {
       COLOUR_LIST.forEach(col => {
         Object.keys(state.table?.[r]?.[col] || {}).forEach(s => allShapes.add(s));
       });
     });
+
+    const avgRoundSize = calcGroupAvgSize("Round", clarityGroups.high, state);
+    const polMM = getMMByWeight(avgRoundSize, state.sizeChart || MASTER_SIZE_CHART);
+
+    // Synchronize labour cost key with Dashboard (uses 'labour' or 'labourCost')
+    const labour = parseFloat(state.labour) || parseFloat(state.labourCost) || 0;
+    const profitPct = parseFloat(state.profit_margin) || 0;
+
+    const polPerRough = roughCts > 0 ? totals.totalValue / roughCts : 0;
+    const finalBid = (polPerRough - labour) * (1 - profitPct / 100) * roughCts;
 
     return {
       id: parcel.id,
@@ -211,18 +215,19 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
       polPcs: totals.totalPcs,
       yield: roughCts > 0 ? (totals.totalCts / roughCts) * 100 : 0,
       polVal: totals.totalValue,
-      polPerRough: roughCts > 0 ? totals.totalValue / roughCts : 0,
-      usablePol: totals.usableData.usablePol,
-      usableVal: totals.usableData.usableVal,
-      nonUsablePol: totals.usableData.nonUsablePol,
-      nonUsableVal: totals.usableData.nonUsableVal,
+      polPerRough,
+      usablePol: totals.usableData?.usablePol || 0,
+      usableVal: totals.usableData?.usableVal || 0,
+      nonUsablePol: totals.usableData?.nonUsablePol || 0,
+      nonUsableVal: totals.usableData?.nonUsableVal || 0,
       colorProfile: totals.colorProfile,
       clarityProfile: totals.clarityProfile,
       fluo: state.fluo || { "None": 100, "Fnt": 0, "Med/Stg": 0 },
       polMM,
       avgRoundSize,
       shapes: Array.from(allShapes).join(', '),
-      finalBid
+      finalBid,
+      hasPrices
     };
   };
 
