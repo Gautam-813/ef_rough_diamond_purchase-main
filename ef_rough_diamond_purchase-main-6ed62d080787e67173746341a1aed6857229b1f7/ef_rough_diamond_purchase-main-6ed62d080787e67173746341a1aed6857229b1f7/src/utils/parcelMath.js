@@ -71,21 +71,22 @@ export const calculateParcelTotals = (state, parcel, globalPrices, COLOUR_LIST, 
       const getGroupAvgSize = (category, clarities) => {
          let totalPolC = 0;
          let totalPolP = 0;
+         const isRoundCategory = category.toLowerCase() === "round";
          
          (state.ranges || []).forEach(range => {
-            if (range !== r) return; // Only scan current range
+            if (range !== r) return;
             COLOUR_LIST.forEach(colour => {
                const shapesInTable = Object.keys(state.table?.[range]?.[colour] || {});
-               const shapesToScan = category === "Round" 
-                  ? ["Round"] 
-                  : shapesInTable.filter(s => s !== "Round");
+               const shapesToScan = isRoundCategory 
+                  ? shapesInTable.filter(s => s.toLowerCase() === "round")
+                  : shapesInTable.filter(s => s.toLowerCase() !== "round");
 
                shapesToScan.forEach(shape => {
                   clarities.forEach(clarity => {
                      const sCts = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
                      const sPcs = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
                      if (sCts > 0 && sPcs > 0) {
-                        const isRound = shape === "Round";
+                        const isRound = shape.toLowerCase() === "round";
                         const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
                         const yld = isRound ? (parseFloat(roundYieldByClarity[clarity]) || roundYield) : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
                         const mult = isRound ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
@@ -108,15 +109,22 @@ export const calculateParcelTotals = (state, parcel, globalPrices, COLOUR_LIST, 
       };
 
       COLOUR_LIST.forEach(col => {
-         selectedShapes.forEach(shape => {
+         // IMPORTANT: Scan all shapes present in the data, not just selected ones
+         const shapesInData = new Set();
+         (state.ranges || []).forEach(range => {
+            if (range !== r) return;
+            Object.keys(state.table?.[range]?.[col] || {}).forEach(s => shapesInData.add(s));
+         });
+
+         shapesInData.forEach(shape => {
             CLARITY_LIST.forEach(clr => {
                const sPcs = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
                const sCts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
                if (sCts === 0 && sPcs === 0) return;
 
                const cMult = parseFloat(clarityMultipliers[clr]) || 1;
-               const isRound = shape === "Round";
-               const priceShape = isRound ? "Round" : "Fancy";
+               const isRound = shape.toLowerCase() === "round";
+               const lookupShape = isRound ? "Round" : "Fancy";
 
                const yld = isRound ? (parseFloat(roundYieldByClarity[clr]) || roundYield) : (parseFloat(fancyYieldByClarity[clr]) || fancyYield);
                const mult = isRound ? (parseFloat(roundMultiplierByClarity[clr]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clr]) || fancyMultiplier);
@@ -126,10 +134,12 @@ export const calculateParcelTotals = (state, parcel, globalPrices, COLOUR_LIST, 
                const polP = Math.round((sPcs * rangeScaleFactor * cMult) * mult);
 
                const isHigh = clarityGroups.high.includes(clr);
-               const grpAvg = isHigh ? avgs[priceShape].high : avgs[priceShape].low;
+               const grpAvg = isHigh ? avgs[lookupShape].high : avgs[lookupShape].low;
                const pIdx = getPriceIdxByWeight(grpAvg);
 
-               const price = globalPrices?.[priceShape]?.[pIdx]?.[col]?.[clr] || 0;
+               // Case-insensitive shape lookup in globalPrices
+               const priceShapeKey = Object.keys(globalPrices || {}).find(k => k.toLowerCase() === lookupShape.toLowerCase()) || lookupShape;
+               const price = globalPrices?.[priceShapeKey]?.[pIdx]?.[col]?.[clr] || 0;
                const val = polC * price;
 
                totalPolCts += polC;

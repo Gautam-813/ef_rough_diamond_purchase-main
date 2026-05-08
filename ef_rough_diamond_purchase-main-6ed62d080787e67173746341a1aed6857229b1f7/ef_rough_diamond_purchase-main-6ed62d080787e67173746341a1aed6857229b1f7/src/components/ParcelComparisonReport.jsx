@@ -142,6 +142,8 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     const calcGroupAvgSize = (category, clarities) => {
       let tPolC = 0;
       let tPolP = 0;
+      const isRoundCategory = category.toLowerCase() === "round";
+
       (state.ranges || []).forEach(r => {
         const target = state.sizeProfile?.[r] || { cts: 0, avg: 0 };
         const sample = state.sampleConfig?.[r] || { cts: 0, pcs: 0 };
@@ -161,14 +163,16 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
 
         COLOUR_LIST.forEach(colour => {
           const shapesInTable = Object.keys(state.table?.[r]?.[colour] || {});
-          const shapesToScan = category === "Round" ? ["Round"] : shapesInTable.filter(s => s !== "Round");
+          const shapesToScan = isRoundCategory 
+            ? shapesInTable.filter(s => s.toLowerCase() === "round")
+            : shapesInTable.filter(s => s.toLowerCase() !== "round");
 
           shapesToScan.forEach(shape => {
             clarities.forEach(clarity => {
               const roughP_sample = parseFloat(state.table?.[r]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
               const assortmentCts = parseFloat(state.table?.[r]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
               if (assortmentCts > 0 && roughP_sample > 0) {
-                const isRound = shape === "Round";
+                const isRound = shape.toLowerCase() === "round";
                 const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
                 const yld = isRound ? (parseFloat(roundYieldByClarity[clarity]) || roundYield) : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
                 const mult = isRound ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
