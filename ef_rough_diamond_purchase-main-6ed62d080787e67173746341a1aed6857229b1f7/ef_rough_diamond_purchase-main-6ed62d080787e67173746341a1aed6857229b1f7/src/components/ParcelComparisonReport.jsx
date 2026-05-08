@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatNum } from '../utils/calculations';
+import { getPriceIdxByWeight } from '../utils/priceUtils';
 import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES, MASTER_SIZE_CHART } from '../constants/diamondData';
 
 const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
@@ -133,22 +134,75 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     const allShapes = new Set();
 
     const ranges = state.ranges || [];
+    const clarityGroups = {
+      high: ['VVS', 'VS1', 'VS2'],
+      low: ['SI1', 'SI2', 'I1', 'I2']
+    };
+
     ranges.forEach(r => {
       const target = state.sizeProfile?.[r] || { cts: 0 };
       const sampleRoughCts = getRoughCtsByRange(state, r);
       const scaleFactor = (target.cts > 0 && sampleRoughCts > 0) ? (target.cts / sampleRoughCts) : 1;
-      const rangeCfg = state.rangeConfig?.[r] || { yield: 44 };
-      const yieldPct = parseFloat(rangeCfg.yield) || 44;
+      const rangeCfg = state.rangeConfig?.[r] || { yield: 44, roundYieldByClarity: {}, fancyYieldByClarity: {}, roundMultiplierByClarity: {}, fancyMultiplierByClarity: {} };
+      const defaultYield = parseFloat(rangeCfg.yield) || 44;
+      const roundYieldByClarity = rangeCfg.roundYieldByClarity || {};
+      const fancyYieldByClarity = rangeCfg.fancyYieldByClarity || {};
+      const roundMultiplierByClarity = rangeCfg.roundMultiplierByClarity || {};
+      const fancyMultiplierByClarity = rangeCfg.fancyMultiplierByClarity || {};
+      const roundMultiplier = parseFloat(rangeCfg.roundMultiplier) || 1;
+      const fancyMultiplier = parseFloat(rangeCfg.fancyMultiplier) || 1.5;
 
+      const getGroupAvgSize = (shape, clarities) => {
+        let totalPolC = 0;
+        let totalPolP = 0;
+        for (const col of COLOUR_LIST) {
+          for (const clr of clarities) {
+            const sPcs = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
+            const sCts = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
+            if (sCts > 0 && sPcs > 0) {
+              const isRound = shape === "Round";
+              const yld = isRound ? (parseFloat(roundYieldByClarity[clr]) || defaultYield) : (parseFloat(fancyYieldByClarity[clr]) || defaultYield);
+              const mult = isRound ? (parseFloat(roundMultiplierByClarity[clr]) || roundMultiplier) : (parseFloat(fancyMultiplierByClarity[clr]) || fancyMultiplier);
+              const polP = Math.round((sPcs * scaleFactor) * mult);
+              const polC = sCts * scaleFactor * (yld / 100);
+              totalPolC += polC;
+              totalPolP += polP;
+            }
+          }
+        }
+        return totalPolP > 0 ? totalPolC / totalPolP : 0;
+      };
 
+      const groupAvgs = {
+        Round: {
+          high: getGroupAvgSize("Round", clarityGroups.high),
+          low: getGroupAvgSize("Round", clarityGroups.low)
+        },
+        Fancy: {
+          high: getGroupAvgSize("Fancy", clarityGroups.high),
+          low: getGroupAvgSize("Fancy", clarityGroups.low)
+        }
+      };
 
       COLOUR_LIST.forEach(col => {
         Object.keys(state.table?.[r]?.[col] || {}).forEach(shape => {
           CLARITY_LIST.forEach(clr => {
             const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
+            const sP = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.pcs) || 0;
+            const isRound = shape === "Round";
+            const yieldPct = isRound 
+              ? (parseFloat(roundYieldByClarity[clr]) || defaultYield)
+              : (parseFloat(fancyYieldByClarity[clr]) || defaultYield);
+            const mult = isRound 
+              ? (parseFloat(roundMultiplierByClarity[clr]) || roundMultiplier)
+              : (parseFloat(fancyMultiplierByClarity[clr]) || fancyMultiplier);
             const polC = (sC * scaleFactor) * (yieldPct / 100);
-            const priceIdx = getPriceIdxFromRange(r);
-            const priceShape = shape === "Round" ? "Round" : "Fancy";
+            const polP = Math.round((sP * scaleFactor) * mult);
+            
+            const isHigh = clarityGroups.high.includes(clr);
+            const priceShape = isRound ? "Round" : "Fancy";
+            const grpAvg = isHigh ? groupAvgs[priceShape].high : groupAvgs[priceShape].low;
+            const priceIdx = getPriceIdxByWeight(grpAvg);
             const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
             const val = polC * price;
 

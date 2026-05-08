@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatNum } from '../utils/calculations';
+import { getPriceIdxFromRange } from '../utils/priceUtils';
 import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES } from '../constants/diamondData';
 
 const TenderSummaryReport = ({ tender, parcels, prices }) => {
@@ -40,8 +41,10 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
     const ranges = state.ranges || [];
     ranges.forEach(r => {
       const target = state.sizeProfile?.[r] || { cts: 0 };
-      const rangeCfg = state.rangeConfig?.[r] || { yield: 44 };
-      const yieldPct = parseFloat(rangeCfg.yield) || 44;
+      const rangeCfg = state.rangeConfig?.[r] || { yield: 44, roundYieldByClarity: {}, fancyYieldByClarity: {} };
+      const defaultYield = parseFloat(rangeCfg.yield) || 44;
+      const roundYieldByClarity = rangeCfg.roundYieldByClarity || {};
+      const fancyYieldByClarity = rangeCfg.fancyYieldByClarity || {};
 
       pRough += parseFloat(target.cts) || 0;
 
@@ -61,11 +64,16 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
         for (const col of COLOUR_LIST) {
           const colData = state.table && state.table[r] && state.table[r][col] ? state.table[r][col] : {};
           for (const shape of Object.keys(colData)) {
+            const isRound = shape === "Round";
             for (const clr of CLARITY_LIST) {
               const sC = parseFloat(colData[shape]?.[clr]?.cts) || 0;
+              const yieldPct = isRound 
+                ? (parseFloat(roundYieldByClarity[clr]) || defaultYield)
+                : (parseFloat(fancyYieldByClarity[clr]) || defaultYield);
               const polC = (sC * scaleFactor) * (yieldPct / 100);
-              const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-              const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
+              const priceIdx = getPriceIdxFromRange(r);
+              const priceShape = shape === "Round" ? "Round" : "Fancy";
+              const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
 
               pPol += polC;
               pVal += (polC * price);
