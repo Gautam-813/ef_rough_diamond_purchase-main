@@ -79,6 +79,32 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     return `${lowerBounds.start}-${upperBounds.end} mm`;
   };
 
+  // Map range string to price index (e.g., "0.009-0.021" -> "r3")
+  const getPriceIdxFromRange = (rangeStr) => {
+    if (!rangeStr) return "r1";
+    // Extract lower bound from range like "0.009-0.021"
+    const match = rangeStr.match(/^([\d.]+)/);
+    if (!match) return "r1";
+    const weight = parseFloat(match[1]);
+    
+    if (weight <= 0.004) return "r1";
+    if (weight <= 0.008) return "r2";
+    if (weight <= 0.021) return "r3";
+    if (weight <= 0.051) return "r4";
+    if (weight <= 0.077) return "r5";
+    if (weight <= 0.115) return "r6";
+    if (weight <= 0.158) return "r7";
+    if (weight <= 0.18) return "r8";
+    if (weight <= 0.22) return "r9";
+    if (weight <= 0.29) return "r10";
+    if (weight <= 0.39) return "r11";
+    if (weight <= 0.49) return "r12";
+    if (weight <= 0.69) return "r13";
+    if (weight <= 0.89) return "r14";
+    if (weight <= 0.99) return "r15";
+    return "r16";
+  };
+
   // Calculate metrics for a parcel
   const calculateParcelMetrics = (parcel) => {
     const state = parcel.calc_state;
@@ -121,8 +147,9 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           CLARITY_LIST.forEach(clr => {
             const sC = parseFloat(state.table?.[r]?.[col]?.[shape]?.[clr]?.cts) || 0;
             const polC = (sC * scaleFactor) * (yieldPct / 100);
-            const priceIdx = SIEVE_RANGES[r]?.priceIdx || "s1";
-            const price = prices?.[shape]?.[priceIdx]?.[col]?.[clr] || 0;
+            const priceIdx = getPriceIdxFromRange(r);
+            const priceShape = shape === "Round" ? "Round" : "Fancy";
+            const price = prices?.[priceShape]?.[priceIdx]?.[col]?.[clr] || 0;
             const val = polC * price;
 
             polCts += polC;
