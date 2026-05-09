@@ -796,6 +796,9 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
           }
         }
       `}</style>
+      <div style={{ textAlign: 'center', opacity: 0.2, fontSize: 10, marginTop: 20 }}>
+        System Sync Engine v3.1 | Database JSON-safe mode
+      </div>
     </div>
   );
 };
