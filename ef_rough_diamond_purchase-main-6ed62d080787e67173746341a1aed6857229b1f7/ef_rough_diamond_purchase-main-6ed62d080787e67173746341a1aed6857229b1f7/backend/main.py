@@ -511,6 +511,83 @@ def delete_media(media_id: int, db: Session = Depends(get_db), current_user: mod
     db.commit()
     return {"status": "success", "message": "Media deleted successfully"}
 
+# --- DEBUG ENDPOINT (Remove in production!) ---
+@app.get("/debug-db")
+def debug_database(db: Session = Depends(get_db)):
+    result = {"users": [], "configs": [], "parcels": []}
+    
+    users = db.query(models.User).all()
+    for u in users:
+        result["users"].append({
+            "id": u.id,
+            "email": u.email,
+            "role": u.role
+        })
+    
+    configs = db.query(models.MasterConfig).all()
+    for cfg in configs:
+        po = cfg.price_overrides
+        has_price_data = False
+        sample_price = None
+        
+        if po and isinstance(po, dict):
+            shapes = list(po.keys())
+            if shapes:
+                first_shape = shapes[0]
+                ranges = list(po[first_shape].keys()) if isinstance(po[first_shape], dict) else []
+                if ranges:
+                    first_range = ranges[0]
+                    colors = list(po[first_shape][first_range].keys()) if isinstance(po[first_shape][first_range], dict) else []
+                    if colors:
+                        sample_price = po[first_shape][first_range][colors[0]].get(
+                            list(po[first_shape][first_range][colors[0]].keys())[0] if po[first_shape][first_range][colors[0]] else None, 
+                            None
+                        ) if isinstance(po[first_shape][first_range][colors[0]], dict) else po[first_shape][first_range][colors[0]]
+                        has_price_data = sample_price is not None and sample_price > 0
+        
+        result["configs"].append({
+            "user_id": cfg.user_id,
+            "default_labour_cost": cfg.default_labour_cost,
+            "preferred_pricing_mode": cfg.preferred_pricing_mode,
+            "price_overrides_has_data": bool(po),
+            "price_overrides_shapes": list(po.keys()) if po and isinstance(po, dict) else [],
+            "sample_price": sample_price
+        })
+    
+    parcels = db.query(models.Parcel).limit(10).all()
+    for p in parcels:
+        calc = p.calc_state
+        has_table = bool(calc and calc.get('table'))
+        has_prices = bool(calc and calc.get('prices'))
+        prices_has_data = False
+        if has_prices and calc['prices']:
+            for shape in ['Round', 'Fancy']:
+                if shape in calc['prices']:
+                    for rng in calc['prices'][shape]:
+                        for col in calc['prices'][shape][rng]:
+                            for clr in ['VVS', 'VS1', 'SI1']:
+                                val = calc['prices'][shape][rng][col].get(clr, 0)
+                                if val and val > 0:
+                                    prices_has_data = True
+                                    break
+                            if prices_has_data:
+                                break
+                        if prices_has_data:
+                            break
+                    if prices_has_data:
+                        break
+        
+        result["parcels"].append({
+            "id": p.id,
+            "name": p.name,
+            "tender_id": p.tender_id,
+            "has_calc_state_table": has_table,
+            "has_calc_state_prices": has_prices,
+            "prices_has_real_data": prices_has_data
+        })
+    
+    return result
+
 # --- SERVE FRONTEND (Single Server Mode) ---
 # This assumes you have run 'npm run build' in the root directory
 # and the 'dist' folder exists.

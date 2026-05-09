@@ -124,6 +124,11 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
     // Use parcel-specific prices if available, otherwise fallback to global prices
     const parcelPrices = state.prices || prices;
 
+    // Check if prices are still the default empty ones
+    const hasPrices = parcelPrices && 
+      ((parcelPrices.Round && Object.values(parcelPrices.Round).some(r => Object.values(r).some(c => Object.values(c).some(p => p > 0)))) ||
+       (parcelPrices.Fancy && Object.values(parcelPrices.Fancy).some(r => Object.values(r).some(c => Object.values(c).some(p => p > 0)))));
+
     const totals = calculateParcelTotals(state, parcel, parcelPrices, COLOUR_LIST, CLARITY_LIST, isHotSize);
     if (!totals) return null;
 
@@ -134,12 +139,6 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
       const avg = parseFloat(data.avg) || 0;
       return sum + (avg > 0 ? Math.round(cts / avg) : 0);
     }, 0) || parcel.pcs || 0;
-
-    const labour = parseFloat(state.labour) || 0;
-    // Per Ct Pol $ = Polish Value ÷ Rough Cts
-    const perCtPol = roughCts > 0 ? totals.totalValue / roughCts : 0;
-    // FINAL BID VALUE = Per Ct Pol $ - Labour ($/ct)
-    const finalBid = perCtPol - labour;
 
     // Calculate avg size per clarity group to get the MM display
     // Mirroring PolishTable logic for UI consistency
