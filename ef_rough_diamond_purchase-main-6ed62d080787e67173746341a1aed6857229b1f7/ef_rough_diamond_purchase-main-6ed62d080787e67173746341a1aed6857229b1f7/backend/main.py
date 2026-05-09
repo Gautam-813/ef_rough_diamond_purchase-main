@@ -512,7 +512,7 @@ def delete_media(media_id: int, db: Session = Depends(get_db), current_user: mod
     return {"status": "success", "message": "Media deleted successfully"}
 
 # --- DEBUG ENDPOINT (Remove in production!) ---
-@app.get("/debug-db")
+@app.get("/api/debug-db")
 def debug_database(db: Session = Depends(get_db)):
     result = {"users": [], "configs": [], "parcels": []}
     
@@ -596,6 +596,7 @@ def debug_database(db: Session = Depends(get_db)):
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "dist")
 
 if os.path.exists(frontend_path):
+    # Mount frontend FIRST
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
     
     # Catch-all route for React client-side routing
