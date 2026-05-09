@@ -1649,7 +1649,7 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
             <div className="calc-content" style={{ flex: 1 }}>
                {activeTab === 'parcel_input' && (
                   <div className="parcel-input-view">
-                     <div className="section-hdr"><h2 className="title-glow">Parcel Profile Input Test</h2></div>
+                     <div className="section-hdr"><h2 className="title-glow">Parcel Profile INPUT TEST XXXXX</h2></div>
                      <div className="card glass" style={{ maxWidth: 600 }}>
                         <TenderProfileHeader
                            tender={tenderData}
