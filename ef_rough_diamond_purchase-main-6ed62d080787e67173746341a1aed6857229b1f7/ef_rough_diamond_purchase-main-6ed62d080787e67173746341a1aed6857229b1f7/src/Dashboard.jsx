@@ -493,19 +493,19 @@ const PriceMasterView = ({ prices, onUpdate }) => {
    const uiShapes = ["Round", "Pear/Oval", "Baguette", "Triangles"];
    const sieves = PRICE_SIEVES;
 
-const handlePriceChange = (col, clr, val) => {
-       const next = { ...prices };
-       // Map non-round shapes to 'Fancy' in the backend
-       const priceShape = activeShape === "Round" ? "Round" : "Fancy";
-       const shapeKey = Object.keys(next).find(k => k.toLowerCase() === priceShape.toLowerCase()) || priceShape;
+   const handlePriceChange = (col, clr, val) => {
+      const next = { ...prices };
+      // Map non-round shapes to 'Fancy' in the backend
+      const priceShape = activeShape === "Round" ? "Round" : "Fancy";
+      const shapeKey = Object.keys(next).find(k => k.toLowerCase() === priceShape.toLowerCase()) || priceShape;
 
-       if (!next[shapeKey]) next[shapeKey] = {};
-       if (!next[shapeKey][activeSieve]) next[shapeKey][activeSieve] = {};
-       if (!next[shapeKey][activeSieve][col]) next[shapeKey][activeSieve][col] = {};
-       // Store raw string while typing to preserve decimal point
-       next[shapeKey][activeSieve][col][clr] = val;
-       onUpdate(next);
-    };
+      if (!next[shapeKey]) next[shapeKey] = {};
+      if (!next[shapeKey][activeSieve]) next[shapeKey][activeSieve] = {};
+      if (!next[shapeKey][activeSieve][col]) next[shapeKey][activeSieve][col] = {};
+      // Store raw string while typing to preserve decimal point
+      next[shapeKey][activeSieve][col][clr] = val;
+      onUpdate(next);
+   };
 
    const handleExcelSync = async (e) => {
       const file = e.target.files[0];
@@ -598,12 +598,12 @@ const handlePriceChange = (col, clr, val) => {
                         <td style={{ fontWeight: 800, background: 'rgba(255,255,255,0.05)' }}>{col}</td>
                         {CLARITY_LIST.map(clr => (
                            <td key={clr}>
-<input
-                                  className="cell-input"
-                                  style={{ textAlign: 'center', background: 'transparent', border: 'none', color: '#fff', width: '100%' }}
-                                  value={currentGrid[col]?.[clr] !== undefined ? currentGrid[col][clr] : ""}
-                                  onChange={e => handlePriceChange(col, clr, e.target.value)}
-                               />
+                              <input
+                                 className="cell-input"
+                                 style={{ textAlign: 'center', background: 'transparent', border: 'none', color: '#fff', width: '100%' }}
+                                 value={currentGrid[col]?.[clr] !== undefined ? currentGrid[col][clr] : ""}
+                                 onChange={e => handlePriceChange(col, clr, e.target.value)}
+                              />
                            </td>
                         ))}
                      </tr>
@@ -650,7 +650,7 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
    const samplePcs = parseFloat(sample.pcs) || 0;
    const sampleCts = parseFloat(sample.cts) || 0;
    const sampleAvg = samplePcs > 0 ? sampleCts / samplePcs : 0;
-   
+
    // DUAL SCALING FACTORS: Separate pieces and carats to ensure perfect reconciliation
    const scaleFactorCts = (targetCts > 0 && sampleCts > 0) ? (targetCts / sampleCts) : 1;
    const scaleFactorPcs = (targetPcs > 0 && samplePcs > 0) ? (targetPcs / samplePcs) : 1;
@@ -811,14 +811,14 @@ const AssortmentTable = ({ range, state, onValueChange, onSampleChange, onUpdate
 
 // Component for IMAGE 2: Polish Calculation
 const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, sizeChart }) => {
-   const rangeCfg = state.rangeConfig?.[range] || { 
-       yield: 44, labour: 35, profit: 15, multiplier: 1, 
-       clarityMultipliers: {}, 
-       roundYield: 44, roundMultiplier: 1, fancyYield: 40, fancyMultiplier: 1.5,
-       roundUsePrevPrice: {}, fancyUsePrevPrice: {},
-       roundYieldByClarity: {}, fancyYieldByClarity: {},
-       roundMultiplierByClarity: {}, fancyMultiplierByClarity: {}
-    };
+   const rangeCfg = state.rangeConfig?.[range] || {
+      yield: 44, labour: 35, profit: 15, multiplier: 1,
+      clarityMultipliers: {},
+      roundYield: 44, roundMultiplier: 1, fancyYield: 40, fancyMultiplier: 1.5,
+      roundUsePrevPrice: {}, fancyUsePrevPrice: {},
+      roundYieldByClarity: {}, fancyYieldByClarity: {},
+      roundMultiplierByClarity: {}, fancyMultiplierByClarity: {}
+   };
    const roundYield = parseFloat(rangeCfg.roundYield) || 44;
    const roundMultiplier = parseFloat(rangeCfg.roundMultiplier) || 1;
    const fancyYield = parseFloat(rangeCfg.fancyYield) || 40;
@@ -827,12 +827,12 @@ const PolishTable = ({ range, state, prices, onUpdateConfig, onGlobalUpdate, siz
    const clarityMultipliers = rangeCfg.clarityMultipliers || {};
    const roundYieldByClarity = rangeCfg.roundYieldByClarity || {};
    const fancyYieldByClarity = rangeCfg.fancyYieldByClarity || {};
-const roundMultiplierByClarity = rangeCfg.roundMultiplierByClarity || {};
-    const fancyMultiplierByClarity = rangeCfg.fancyMultiplierByClarity || {};
-    const roundUsePrevPrice = rangeCfg.roundUsePrevPrice || {};
-    const fancyUsePrevPrice = rangeCfg.fancyUsePrevPrice || {};
+   const roundMultiplierByClarity = rangeCfg.roundMultiplierByClarity || {};
+   const fancyMultiplierByClarity = rangeCfg.fancyMultiplierByClarity || {};
+   const roundUsePrevPrice = rangeCfg.roundUsePrevPrice || {};
+   const fancyUsePrevPrice = rangeCfg.fancyUsePrevPrice || {};
 
-    const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
+   const target = state.sizeProfile?.[range] || { cts: 0, avg: 0 };
    const targetCts = parseFloat(target.cts) || 0;
    const targetPcs = target.avg > 0 ? Math.round(targetCts / target.avg) : 0;
 
@@ -876,22 +876,22 @@ const roundMultiplierByClarity = rangeCfg.roundMultiplierByClarity || {};
       return totalPolP > 0 ? totalPolC / totalPolP : 0;
    };
 
-const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
-    // Check if all low-clarity multipliers for Round are ≤ 1
-    const roundLowMults = clarityGroups.low.map(c => parseFloat(roundMultiplierByClarity[c]) || 1);
-    const roundAllLowMultsLE1 = roundLowMults.every(m => m <= 1);
-    // If all low multipliers ≤ 1, use high avg. Else calculate separately
-    const roundLowAvg = roundAllLowMultsLE1 ? roundHighAvg : calcGroupAvgSize('Round', clarityGroups.low);
+   const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
+   // Check if all low-clarity multipliers for Round are ≤ 1
+   const roundLowMults = clarityGroups.low.map(c => parseFloat(roundMultiplierByClarity[c]) || 1);
+   const roundAllLowMultsLE1 = roundLowMults.every(m => m <= 1);
+   // If all low multipliers ≤ 1, use high avg. Else calculate separately
+   const roundLowAvg = roundAllLowMultsLE1 ? roundHighAvg : calcGroupAvgSize('Round', clarityGroups.low);
 
-    const fancyHighAvg = calcGroupAvgSize('Fancy', clarityGroups.high);
-    // Check if all low-clarity multipliers for Fancy are ≤ 1
-    const fancyLowMults = clarityGroups.low.map(c => parseFloat(fancyMultiplierByClarity[c]) || 1);
-    const fancyAllLowMultsLE1 = fancyLowMults.every(m => m <= 1);
-    // If all low multipliers ≤ 1, use high avg. Else calculate separately
-    const fancyLowAvg = fancyAllLowMultsLE1 ? fancyHighAvg : calcGroupAvgSize('Fancy', clarityGroups.low);
+   const fancyHighAvg = calcGroupAvgSize('Fancy', clarityGroups.high);
+   // Check if all low-clarity multipliers for Fancy are ≤ 1
+   const fancyLowMults = clarityGroups.low.map(c => parseFloat(fancyMultiplierByClarity[c]) || 1);
+   const fancyAllLowMultsLE1 = fancyLowMults.every(m => m <= 1);
+   // If all low multipliers ≤ 1, use high avg. Else calculate separately
+   const fancyLowAvg = fancyAllLowMultsLE1 ? fancyHighAvg : calcGroupAvgSize('Fancy', clarityGroups.low);
 
-    const roundAvg = (roundHighAvg + roundLowAvg) / 2;
-    const polMM = getMMByWeight(roundAvg, sizeChart);
+   const roundAvg = (roundHighAvg + roundLowAvg) / 2;
+   const polMM = getMMByWeight(roundAvg, sizeChart);
 
    return (
       <div className="card glass category-card" style={{ marginBottom: 24 }}>
@@ -901,67 +901,67 @@ const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
             </div>
          </div>
 
-<div className="shape-settings" style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-             <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Shape-Specific Settings (Yield % / Multiplier / Use Prev)</h4>
-             <table className="shape-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, textAlign: 'center' }}>
-                <thead>
-                   <tr style={{ background: 'rgba(255,255,255,0.1)' }}>
-                      <th style={{ padding: '6px', textAlign: 'left', fontWeight: 600, color: '#fff' }}>Shape</th>
-                      {CLARITY_LIST.map(c => (
-                         <React.Fragment key={c}>
-                            <th style={{ padding: '4px', textAlign: 'center', fontWeight: 600, color: '#fff', borderLeft: '1px solid rgba(255,255,255,0.1)' }} colSpan={3}>{c}</th>
-                         </React.Fragment>
-                      ))}
-                   </tr>
-                   <tr>
-                      <th></th>
-                      {CLARITY_LIST.map(c => (
-                         <React.Fragment key={c}>
-                            <th style={{ padding: '4px', fontSize: 10, fontWeight: 600, color: '#fff', textAlign: 'right' }}>Yld%</th>
-                            <th style={{ padding: '4px', fontSize: 10, fontWeight: 600, color: '#fff', textAlign: 'right' }}>Mult</th>
-                            <th style={{ padding: '4px', fontSize: 9, fontWeight: 600, color: '#fff', textAlign: 'center' }} title="Use previous category price">Prev</th>
-                         </React.Fragment>
-                      ))}
-                   </tr>
-                </thead>
-                <tbody>
-                   <tr>
-                      <td style={{ padding: '8px', fontWeight: 600, color: 'var(--gold)' }}>ROUND</td>
-                      {CLARITY_LIST.map(c => (
-                         <React.Fragment key={c}>
-                            <td style={{ padding: '2px' }}>
-                               <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.roundYieldByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'roundYieldByClarity', { ...(rangeCfg.roundYieldByClarity || {}), [c]: e.target.value })} />
-                            </td>
-                            <td style={{ padding: '2px' }}>
-                               <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.roundMultiplierByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'roundMultiplierByClarity', { ...(rangeCfg.roundMultiplierByClarity || {}), [c]: e.target.value })} />
-                            </td>
-                            <td style={{ padding: '2px' }}>
-                               {['SI1', 'SI2', 'I1', 'I2'].includes(c) && (
+         <div className="shape-settings" style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Shape-Specific Settings (Yield % / Multiplier / Use Prev)</h4>
+            <table className="shape-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, textAlign: 'center' }}>
+               <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.1)' }}>
+                     <th style={{ padding: '6px', textAlign: 'left', fontWeight: 600, color: '#fff' }}>Shape</th>
+                     {CLARITY_LIST.map(c => (
+                        <React.Fragment key={c}>
+                           <th style={{ padding: '4px', textAlign: 'center', fontWeight: 600, color: '#fff', borderLeft: '1px solid rgba(255,255,255,0.1)' }} colSpan={3}>{c}</th>
+                        </React.Fragment>
+                     ))}
+                  </tr>
+                  <tr>
+                     <th></th>
+                     {CLARITY_LIST.map(c => (
+                        <React.Fragment key={c}>
+                           <th style={{ padding: '4px', fontSize: 10, fontWeight: 600, color: '#fff', textAlign: 'right' }}>Yld%</th>
+                           <th style={{ padding: '4px', fontSize: 10, fontWeight: 600, color: '#fff', textAlign: 'right' }}>Mult</th>
+                           <th style={{ padding: '4px', fontSize: 9, fontWeight: 600, color: '#fff', textAlign: 'center' }} title="Use previous category price">Prev</th>
+                        </React.Fragment>
+                     ))}
+                  </tr>
+               </thead>
+               <tbody>
+                  <tr>
+                     <td style={{ padding: '8px', fontWeight: 600, color: 'var(--gold)' }}>ROUND</td>
+                     {CLARITY_LIST.map(c => (
+                        <React.Fragment key={c}>
+                           <td style={{ padding: '2px' }}>
+                              <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.roundYieldByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'roundYieldByClarity', { ...(rangeCfg.roundYieldByClarity || {}), [c]: e.target.value })} />
+                           </td>
+                           <td style={{ padding: '2px' }}>
+                              <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.roundMultiplierByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'roundMultiplierByClarity', { ...(rangeCfg.roundMultiplierByClarity || {}), [c]: e.target.value })} />
+                           </td>
+                           <td style={{ padding: '2px' }}>
+                              {['SI1', 'SI2', 'I1', 'I2'].includes(c) && (
                                  <input type="checkbox" title={`Use ${CLARITY_LIST[CLARITY_LIST.indexOf(c) - 1]} price`} checked={roundUsePrevPrice?.[c] || false} onChange={e => onUpdateConfig(range, 'roundUsePrevPrice', { ...(roundUsePrevPrice || {}), [c]: e.target.checked })} />
-                               )}
-                            </td>
-                         </React.Fragment>
-                      ))}
-                   </tr>
-                   <tr>
-                      <td style={{ padding: '8px', fontWeight: 600, color: 'var(--gold)' }}>FANCY</td>
-                      {CLARITY_LIST.map(c => (
-                         <React.Fragment key={c}>
-                            <td style={{ padding: '2px' }}>
-                               <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.fancyYieldByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'fancyYieldByClarity', { ...(rangeCfg.fancyYieldByClarity || {}), [c]: e.target.value })} />
-                            </td>
-                            <td style={{ padding: '2px' }}>
-                               <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.fancyMultiplierByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'fancyMultiplierByClarity', { ...(rangeCfg.fancyMultiplierByClarity || {}), [c]: e.target.value })} />
-                            </td>
-                            <td style={{ padding: '2px' }}>
-                               {['SI1', 'SI2', 'I1', 'I2'].includes(c) && (
+                              )}
+                           </td>
+                        </React.Fragment>
+                     ))}
+                  </tr>
+                  <tr>
+                     <td style={{ padding: '8px', fontWeight: 600, color: 'var(--gold)' }}>FANCY</td>
+                     {CLARITY_LIST.map(c => (
+                        <React.Fragment key={c}>
+                           <td style={{ padding: '2px' }}>
+                              <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.fancyYieldByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'fancyYieldByClarity', { ...(rangeCfg.fancyYieldByClarity || {}), [c]: e.target.value })} />
+                           </td>
+                           <td style={{ padding: '2px' }}>
+                              <input className="hdr-input" style={{ width: 45, textAlign: 'center' }} value={rangeCfg.fancyMultiplierByClarity?.[c] || ""} onChange={e => onUpdateConfig(range, 'fancyMultiplierByClarity', { ...(rangeCfg.fancyMultiplierByClarity || {}), [c]: e.target.value })} />
+                           </td>
+                           <td style={{ padding: '2px' }}>
+                              {['SI1', 'SI2', 'I1', 'I2'].includes(c) && (
                                  <input type="checkbox" title={`Use ${CLARITY_LIST[CLARITY_LIST.indexOf(c) - 1]} price`} checked={fancyUsePrevPrice?.[c] || false} onChange={e => onUpdateConfig(range, 'fancyUsePrevPrice', { ...(fancyUsePrevPrice || {}), [c]: e.target.checked })} />
-                               )}
-                            </td>
-                         </React.Fragment>
-                      ))}
-                   </tr>
-                </tbody>
+                              )}
+                           </td>
+                        </React.Fragment>
+                     ))}
+                  </tr>
+               </tbody>
             </table>
          </div>
 
@@ -982,52 +982,52 @@ const roundHighAvg = calcGroupAvgSize('Round', clarityGroups.high);
                <tbody>
                   {COLOUR_LIST.map(colour => (
                      <React.Fragment key={colour}>
-{selectedShapes.map((shape, sIdx) => {
-                            let rowP = 0; let rowC = 0; let rowV = 0;
-                            const baseClarityPrices = {}; // Store BASE price for each clarity (original from prices)
-                            return (
-                               <tr key={`${colour}-${shape}`}>
-                                  {sIdx === 0 && <td rowSpan={selectedShapes.length} className="rng-cell" style={{ verticalAlign: 'middle' }}>{colour}</td>}
-                                  <td style={{ fontSize: 11, fontWeight: 600, opacity: 0.8 }}>{shape}</td>
-                                  {CLARITY_LIST.map((clarity, cIdx) => {
-                                     const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
-                                     const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
-                                     const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
+                        {selectedShapes.map((shape, sIdx) => {
+                           let rowP = 0; let rowC = 0; let rowV = 0;
+                           const baseClarityPrices = {}; // Store BASE price for each clarity (original from prices)
+                           return (
+                              <tr key={`${colour}-${shape}`}>
+                                 {sIdx === 0 && <td rowSpan={selectedShapes.length} className="rng-cell" style={{ verticalAlign: 'middle' }}>{colour}</td>}
+                                 <td style={{ fontSize: 11, fontWeight: 600, opacity: 0.8 }}>{shape}</td>
+                                 {CLARITY_LIST.map((clarity, cIdx) => {
+                                    const roughP_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.pcs) || 0;
+                                    const roughC_sample = parseFloat(state.table?.[range]?.[colour]?.[shape]?.[clarity]?.cts) || 0;
+                                    const cMult = parseFloat(clarityMultipliers[clarity]) || 1;
 
-                                     const isRound = shape === "Round";
-                                     const isHighClarity = clarityGroups.high.includes(clarity);
-                                     const pIdx = isRound
-                                        ? (isHighClarity ? getPriceIdxByWeight(roundHighAvg) : getPriceIdxByWeight(roundLowAvg))
-                                        : (isHighClarity ? getPriceIdxByWeight(fancyHighAvg) : getPriceIdxByWeight(fancyLowAvg));
-                                     const perClarityYield = isRound
-                                        ? (parseFloat(roundYieldByClarity[clarity]) || roundYield)
-                                        : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
-                                     const perClarityMultiplier = isRound
-                                        ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
-                                        : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
-                                     const polP = Math.round((roughP_sample * scaleFactorPcs * cMult) * perClarityMultiplier);
-                                     const polC = parseFloat(formatNum((roughC_sample * scaleFactorCts * cMult) * (perClarityYield / 100), 3).replace(/,/g, ''));
+                                    const isRound = shape === "Round";
+                                    const isHighClarity = clarityGroups.high.includes(clarity);
+                                    const pIdx = isRound
+                                       ? (isHighClarity ? getPriceIdxByWeight(roundHighAvg) : getPriceIdxByWeight(roundLowAvg))
+                                       : (isHighClarity ? getPriceIdxByWeight(fancyHighAvg) : getPriceIdxByWeight(fancyLowAvg));
+                                    const perClarityYield = isRound
+                                       ? (parseFloat(roundYieldByClarity[clarity]) || roundYield)
+                                       : (parseFloat(fancyYieldByClarity[clarity]) || fancyYield);
+                                    const perClarityMultiplier = isRound
+                                       ? (parseFloat(roundMultiplierByClarity[clarity]) || roundMultiplier)
+                                       : (parseFloat(fancyMultiplierByClarity[clarity]) || fancyMultiplier);
+                                    const polP = Math.round((roughP_sample * scaleFactorPcs * cMult) * perClarityMultiplier);
+                                    const polC = parseFloat(formatNum((roughC_sample * scaleFactorCts * cMult) * (perClarityYield / 100), 3).replace(/,/g, ''));
 
-                                     const priceShape = shape === "Round" ? "Round" : "Fancy";
-                                     // Get the base price from prices data
-                                     const basePrice = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
-                                     // Store base price first
-                                     baseClarityPrices[clarity] = basePrice;
-                                     // Check if we should use previous clarity's BASE price
-                                     const usePrevPriceCfg = isRound ? roundUsePrevPrice : fancyUsePrevPrice;
-                                     const usePrev = usePrevPriceCfg?.[clarity];
-                                     // If usePrev is true, use the BASE price of previous clarity (not modified)
-                                     const price = (usePrev && cIdx > 0 && baseClarityPrices[CLARITY_LIST[cIdx - 1]]) 
-                                        ? baseClarityPrices[CLARITY_LIST[cIdx - 1]] 
-                                        : basePrice;
+                                    const priceShape = shape === "Round" ? "Round" : "Fancy";
+                                    // Get the base price from prices data
+                                    const basePrice = prices?.[priceShape]?.[pIdx]?.[colour]?.[clarity] || 0;
+                                    // Store base price first
+                                    baseClarityPrices[clarity] = basePrice;
+                                    // Check if we should use previous clarity's BASE price
+                                    const usePrevPriceCfg = isRound ? roundUsePrevPrice : fancyUsePrevPrice;
+                                    const usePrev = usePrevPriceCfg?.[clarity];
+                                    // If usePrev is true, use the BASE price of previous clarity (not modified)
+                                    const price = (usePrev && cIdx > 0 && baseClarityPrices[CLARITY_LIST[cIdx - 1]])
+                                       ? baseClarityPrices[CLARITY_LIST[cIdx - 1]]
+                                       : basePrice;
 
-                                     const totalVal = polC * price;
-                                     rowP += polP; rowC += polC; rowV += totalVal;
+                                    const totalVal = polC * price;
+                                    rowP += polP; rowC += polC; rowV += totalVal;
                                     return (
                                        <React.Fragment key={clarity}>
                                           <td>{polP || ""}</td>
-<td>{formatNum(polC, 3)}</td>
-                                           <td>{formatNum(price, 2)}</td>
+                                          <td>{formatNum(polC, 3)}</td>
+                                          <td>{formatNum(price, 2)}</td>
                                           <td className="text-gold">{formatNum(totalVal, 2)}</td>
                                        </React.Fragment>
                                     );
@@ -1340,27 +1340,27 @@ const FluoProfileTable = ({ totalWeight, totalPcs, fluoState, onUpdate }) => {
 
 function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpdateGlobalPrices }) {
    const [activeTab, setActiveTab] = useState('parcel_input'); // parcel_input, assortment, polish, prices, summary
-const initialState = {
-       table: {},
-       rangeConfig: {},
-       strategy: 'Whole',
-       activeShape: 'Round',
-       sizeProfile: {},
-       sampleConfig: {},
-       fluo: { "None": 95, "Fnt": 0, "Med/Stg": 5 },
-       extrapolate: true,
-       totalRoughWeight: 100,
-       sampleWeight: 10,
-       ranges: [],
-       sizeChart: MASTER_SIZE_CHART,
-       ...parcel.calc_state
-    };
-    // Use parcel's saved prices if available, otherwise fallback to global prices
-    if (!initialState.prices) {
-       initialState.prices = globalPrices;
-    }
+   const initialState = {
+      table: {},
+      rangeConfig: {},
+      strategy: 'Whole',
+      activeShape: 'Round',
+      sizeProfile: {},
+      sampleConfig: {},
+      fluo: { "None": 95, "Fnt": 0, "Med/Stg": 5 },
+      extrapolate: true,
+      totalRoughWeight: 100,
+      sampleWeight: 10,
+      ranges: [],
+      sizeChart: MASTER_SIZE_CHART,
+      ...parcel.calc_state
+   };
+   // Use parcel's saved prices if available, otherwise fallback to global prices
+   if (!initialState.prices) {
+      initialState.prices = globalPrices;
+   }
 
-    const [state, setState] = useState(initialState);
+   const [state, setState] = useState(initialState);
 
    const [parcelData, setParcelData] = useState(parcel);
    const [tenderData, setTenderData] = useState(tender);
@@ -1447,18 +1447,18 @@ const initialState = {
       setState({ ...state, sampleConfig: next });
    };
 
-const handleConfigChange = (range, field, val) => {
-       const next = { ...state.rangeConfig };
-       if (!next[range]) next[range] = { 
-          yield: 44, labour: 35, profit: 15, multiplier: 1, 
-          selectedShapes: ["Round"], clarityMultipliers: {},
-          roundUsePrevPrice: {}, fancyUsePrevPrice: {},
-          roundYieldByClarity: {}, fancyYieldByClarity: {},
-          roundMultiplierByClarity: {}, fancyMultiplierByClarity: {}
-       };
-       next[range][field] = val;
-       setState({ ...state, rangeConfig: next });
-    };
+   const handleConfigChange = (range, field, val) => {
+      const next = { ...state.rangeConfig };
+      if (!next[range]) next[range] = {
+         yield: 44, labour: 35, profit: 15, multiplier: 1,
+         selectedShapes: ["Round"], clarityMultipliers: {},
+         roundUsePrevPrice: {}, fancyUsePrevPrice: {},
+         roundYieldByClarity: {}, fancyYieldByClarity: {},
+         roundMultiplierByClarity: {}, fancyMultiplierByClarity: {}
+      };
+      next[range][field] = val;
+      setState({ ...state, rangeConfig: next });
+   };
 
    const handleClarityMultiplierChange = (range, clarity, val) => {
       const next = { ...state.rangeConfig };
@@ -1501,29 +1501,29 @@ const handleConfigChange = (range, field, val) => {
             api.updateTender(tender.id, tenderUpdate)
          ]);
 
-// Merge server data correctly:
-          // 1. Start with the fresh tender object from server (which has ALL current parcels from DB)
-          // 2. Ensure our currently edited parcel is the one returned from savedParcel
-          const freshParcels = (savedTender.parcels || []).map(p => 
-             p.id === savedParcel.id ? savedParcel : p
-          );
-          
-          const finalUpdate = { ...savedTender, parcels: freshParcels };
-          onUpdate(finalUpdate);
+         // Merge server data correctly:
+         // 1. Start with the fresh tender object from server (which has ALL current parcels from DB)
+         // 2. Ensure our currently edited parcel is the one returned from savedParcel
+         const freshParcels = (savedTender.parcels || []).map(p =>
+            p.id === savedParcel.id ? savedParcel : p
+         );
 
-          // Force page refresh to ensure data is loaded fresh
-          window.dispatchEvent(new Event('storage'));
+         const finalUpdate = { ...savedTender, parcels: freshParcels };
+         onUpdate(finalUpdate);
 
-alert("✅ Data Saved Successfully!");
-       } catch (err) {
-          console.error("Save failed", err);
-          if (err.message === "SESSION_EXPIRED") {
-             alert("Session expired! Please login again.");
-             window.location.href = "/";
-          } else {
-             alert("❌ Save failed: " + err.message);
-          }
-       }
+         // Force page refresh to ensure data is loaded fresh
+         window.dispatchEvent(new Event('storage'));
+
+         alert("✅ Data Saved Successfully!");
+      } catch (err) {
+         console.error("Save failed", err);
+         if (err.message === "SESSION_EXPIRED") {
+            alert("Session expired! Please login again.");
+            window.location.href = "/";
+         } else {
+            alert("❌ Save failed: " + err.message);
+         }
+      }
       setSaving(false);
    };
 
@@ -1649,7 +1649,7 @@ alert("✅ Data Saved Successfully!");
             <div className="calc-content" style={{ flex: 1 }}>
                {activeTab === 'parcel_input' && (
                   <div className="parcel-input-view">
-                     <div className="section-hdr"><h2 className="title-glow">Parcel Profile Input</h2></div>
+                     <div className="section-hdr"><h2 className="title-glow">Parcel Profile Input Test</h2></div>
                      <div className="card glass" style={{ maxWidth: 600 }}>
                         <TenderProfileHeader
                            tender={tenderData}
@@ -1733,9 +1733,9 @@ alert("✅ Data Saved Successfully!");
                      ))}
                   </div>
                )}
-{activeTab === 'prices' && (
-                   <PriceMasterView prices={state.prices} onUpdate={(newPrices) => setState(prev => ({ ...prev, prices: newPrices }))} />
-                )}
+               {activeTab === 'prices' && (
+                  <PriceMasterView prices={state.prices} onUpdate={(newPrices) => setState(prev => ({ ...prev, prices: newPrices }))} />
+               )}
                {activeTab === 'summary' && (
                   <div className="summary-report-view">
                      <div className="section-hdr" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1754,12 +1754,12 @@ alert("✅ Data Saved Successfully!");
                            });
                         }}>📄 Download PDF</button>
                      </div>
-<ParcelSummaryReport
-                         parcel={parcelData}
-                         tender={tenderData}
-                         state={state}
-                         prices={state.prices}
-                         totals={totals}
+                     <ParcelSummaryReport
+                        parcel={parcelData}
+                        tender={tenderData}
+                        state={state}
+                        prices={state.prices}
+                        totals={totals}
                      />
                   </div>
                )}
